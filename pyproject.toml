@@ -1,0 +1,34 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "jupyasyncclient"
+version = "0.1.2"
+description = "Async kernel client for Jupyter Server via HTTP/WebSocket"
+readme = "README.md"
+requires-python = ">=3.10"
+license = {text = "Apache-2"}
+authors = [{name = "Jeremy Howard"}]
+dependencies = [
+  "jupyter_client>=8.0",
+  "aiohttp>=3.8",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=7",
+  "pytest-asyncio>=0.23",
+  "jupyter_server>=2",
+  "ipykernel",
+]
+
+[tool.setuptools.packages.find]
+include = ["jupyasyncclient"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+
+[tool.setuptools.dynamic]
+version = {attr = "dialoghelper.__version__"}
+
