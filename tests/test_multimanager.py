@@ -29,9 +29,7 @@ class TestJupyAsyncMultiKernelManager:
             assert rep2["header"]["msg_type"] == "kernel_info_reply"
         finally:
             for c in clients:
-                try:
-                    await c.aclose()
-                except Exception:
-                    pass
+                try: await c.aclose()
+                except Exception: pass
             await mkm.shutdown_all(now=True)
             await mkm.aclose()

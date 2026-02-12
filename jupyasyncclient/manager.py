@@ -4,7 +4,7 @@ import uuid
 from typing import Any, Dict, Optional, Type
 from urllib.parse import urlencode, urlsplit, urlunsplit
 
-import aiohttp
+import httpx
 
 from .client import JupyAsyncKernelClient
 
@@ -23,7 +23,7 @@ class JupyAsyncKernelManager:
     client_class = JupyAsyncKernelClient
 
     def __init__(self, base_url: str, *, token: str|None=None, kernel_id: str|None=None, kernel_name: str="python3",
-                 username: str|None=None, headers: dict|None=None, timeout: float=30, aiohttp_session: aiohttp.ClientSession|None=None):
+                 username: str|None=None, headers: dict|None=None, timeout: float=30, http_client: httpx.AsyncClient|None=None):
         self.base_url = base_url.rstrip("/")
         self.token = token or ""
         self.kernel_id = kernel_id
@@ -34,24 +34,25 @@ class JupyAsyncKernelManager:
         self._headers = {**(headers or {})}
         if self.token and "Authorization" not in self._headers: self._headers["Authorization"] = f"token {self.token}"
 
-        self._http = aiohttp_session
-        self._own_http = aiohttp_session is None
+        self._http = http_client
+        self._own_http = http_client is None
 
     @property
     def has_kernel(self) -> bool: return bool(self.kernel_id)
 
-    async def _ensure_http(self) -> aiohttp.ClientSession:
-        if self._http and not self._http.closed: return self._http
-        self._http = aiohttp.ClientSession(headers=self._headers, raise_for_status=True)
+    def _ensure_http(self) -> httpx.AsyncClient:
+        if self._http and not self._http.is_closed: return self._http
+        self._http = httpx.AsyncClient(headers=self._headers)
         self._own_http = True
         return self._http
 
     async def _request(self, method: str, path: str, **kwargs: Any) -> Any:
-        http = await self._ensure_http()
-        async with http.request(method, _join_url(self.base_url, path), **kwargs) as r:
-            if r.status == 204: return None
-            ct = (r.headers.get("Content-Type") or "").split(";")[0]
-            return await (r.json() if ct == "application/json" else r.text())
+        http = self._ensure_http()
+        r = await http.request(method, _join_url(self.base_url, path), **kwargs)
+        r.raise_for_status()
+        if r.status_code == 204: return None
+        ct = (r.headers.get("content-type") or "").split(";")[0]
+        return r.json() if ct == "application/json" else r.text
 
     async def start_kernel(self, kernel_name: str | None = None, **kwargs: Any) -> Dict[str, Any]:
         name = kernel_name or self.kernel_name
@@ -84,16 +85,16 @@ class JupyAsyncKernelManager:
         kernel_id = kwargs.pop("kernel_id", None) or self.kernel_id
         if not kernel_id: raise RuntimeError("kernel_id required (call start_kernel first)")
 
-        http = self._http if (self._http and not self._http.closed) else None
+        http = self._http if (self._http and not self._http.is_closed) else None
         return self.client_class(self.base_url, kernel_id=kernel_id, token=self.token,
             username=kwargs.pop("username", None) or self.username, headers=kwargs.pop("headers", None), timeout=kwargs.pop("timeout", None) or self._timeout,
-            aiohttp_session=kwargs.pop("aiohttp_session", None) or http, session_id=kwargs.pop("session_id", None) or uuid.uuid4().hex)
+            http_client=kwargs.pop("http_client", None) or http, session_id=kwargs.pop("session_id", None) or uuid.uuid4().hex)
 
     async def aclose(self) -> None:
-        if self._http and self._own_http and not self._http.closed: await self._http.close()
+        if self._http and self._own_http and not self._http.is_closed: await self._http.aclose()
 
     async def __aenter__(self) -> "JupyAsyncKernelManager":
-        await self._ensure_http()
+        self._ensure_http()
         return self
 
     async def __aexit__(self, *exc: Any) -> None: await self.aclose()
