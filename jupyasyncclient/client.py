@@ -196,54 +196,48 @@ class JupyAsyncKernelClient:
 
     # --- request/reply methods (AsyncKernelClient-style: return msg_id or awaitable) ---
 
+    def _queue_request(self, msg_type, content=None, reply=False, timeout=None, channel="shell"):
+        msg = self.session.msg(msg_type) if content is None else self.session.msg(msg_type, content)
+        msg_id = self._queue_msg(msg, channel)
+        return msg_id if not reply else self._async_recv_reply(msg_id, timeout=timeout, channel=channel)
+
+    def __getattr__(self, name):
+        if name.startswith("_"): raise AttributeError(name)
+        def _f(reply=False, timeout=None, channel="shell", **kwargs):
+            return self._queue_request(name, kwargs or None, reply=reply, timeout=timeout, channel=channel)
+        return _f
+
     def execute(self, code, silent=False, store_history=True, user_expressions=None, allow_stdin=None,
                 stop_on_error=True, reply=False, timeout=None):
         user_expressions = {} if user_expressions is None else user_expressions
         allow_stdin = self.allow_stdin if allow_stdin is None else allow_stdin
         if not isinstance(code, str): raise ValueError(f"code {code!r} must be a string")
         validate_string_dict(user_expressions)
-        content = dict(code=code, silent=silent, store_history=store_history, user_expressions=user_expressions,
-                       allow_stdin=allow_stdin, stop_on_error=stop_on_error)
-        msg_id = self._queue_msg(self.session.msg("execute_request", content), "shell")
-        return msg_id if not reply else self._async_recv_reply(msg_id, timeout=timeout)
+        return self.execute_request(reply=reply, timeout=timeout, code=code, silent=silent, store_history=store_history,
+                                    user_expressions=user_expressions, allow_stdin=allow_stdin, stop_on_error=stop_on_error)
 
     def complete(self, code, cursor_pos=None, reply=False, timeout=None):
         cursor_pos = len(code) if cursor_pos is None else cursor_pos
-        msg_id = self._queue_msg(self.session.msg("complete_request", {"code": code, "cursor_pos": cursor_pos}), "shell")
-        return msg_id if not reply else self._async_recv_reply(msg_id, timeout=timeout)
+        return self.complete_request(code=code, cursor_pos=cursor_pos, reply=reply, timeout=timeout)
 
     def inspect(self, code, cursor_pos=None, detail_level= 0, reply=False, timeout=None):
         cursor_pos = len(code) if cursor_pos is None else cursor_pos
-        content = dict(code=code, cursor_pos=cursor_pos, detail_level=detail_level)
-        msg_id = self._queue_msg(self.session.msg("inspect_request", content), "shell")
-        return msg_id if not reply else self._async_recv_reply(msg_id, timeout=timeout)
+        return self.inspect_request(reply=reply, timeout=timeout, code=code, cursor_pos=cursor_pos, detail_level=detail_level)
 
     def history(self, raw=True, output=False, hist_access_type= "range", reply=False, timeout=None, **kwargs):
         if hist_access_type == "range":
             kwargs.setdefault("session", 0)
             kwargs.setdefault("start", 0)
-        content = dict(raw=raw, output=output, hist_access_type=hist_access_type, **kwargs)
-        msg_id = self._queue_msg(self.session.msg("history_request", content), "shell")
-        return msg_id if not reply else self._async_recv_reply(msg_id, timeout=timeout)
-
-    def kernel_info(self, reply=False, timeout=None):
-        msg_id = self._queue_msg(self.session.msg("kernel_info_request"), "shell")
-        return msg_id if not reply else self._async_recv_reply(msg_id, timeout=timeout)
+        return self.history_request(reply=reply, timeout=timeout, raw=raw, output=output, hist_access_type=hist_access_type, **kwargs)
 
     def comm_info(self, target_name=None, reply=False, timeout=None):
-        content = {} if target_name is None else {"target_name": target_name}
-        msg_id = self._queue_msg(self.session.msg("comm_info_request", content), "shell")
-        return msg_id if not reply else self._async_recv_reply(msg_id, timeout=timeout)
+        return self.comm_info_request(reply=reply, timeout=timeout, target_name=target_name)
 
-    def is_complete(self, code, reply=False, timeout=None):
-        msg_id = self._queue_msg(self.session.msg("is_complete_request", {"code": code}), "shell")
-        return msg_id if not reply else self._async_recv_reply(msg_id, timeout=timeout)
-
-    def input(self, string: str): self._queue_msg(self.session.msg("input_reply", {"value": string}), "stdin")
-
+    def kernel_info(self, reply=False, timeout=None): return self.kernel_info_request(reply=reply, timeout=timeout)
+    def is_complete(self, code, reply=False, timeout=None): return self.is_complete_request(code=code, reply=reply, timeout=timeout)
+    def input(self, string: str): self.input_reply(value=string, channel="stdin")
     def shutdown(self, restart=False, reply=False, timeout=None):
-        msg_id = self._queue_msg(self.session.msg("shutdown_request", {"restart": restart}), "control")
-        return msg_id if not reply else self._async_recv_reply(msg_id, timeout=timeout, channel="control")
+        return self.shutdown_request(restart=restart, reply=reply, timeout=timeout, channel="control")
 
     # --- interactive execution ---
 
@@ -259,9 +253,7 @@ class JupyAsyncKernelClient:
         prompt = getpass if c.get("password") else input
         try: raw = prompt(c.get("prompt", ""))
         except EOFError: raw = "\x04"
-        except KeyboardInterrupt:
-            sys.stdout.write("\n")
-            return
+        except KeyboardInterrupt: return sys.stdout.write("\n")
         self.input(raw)
 
     async def execute_interactive(self, code, silent=False, store_history=True, user_expressions=None,

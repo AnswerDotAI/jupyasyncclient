@@ -41,3 +41,16 @@ class TestJupyAsyncKernelClient:
         rep = await kc.shutdown(reply=True, timeout=TIMEOUT)
         assert rep["header"]["msg_type"] == "shutdown_reply"
 
+    async def test_concurrent_reply_waiters_route_by_parent_msg_id(self, kc):
+        # Start two execute requests, then start waiter 2 first so queue consumers are intentionally inverted.
+        c1 = kc.execute("import time; time.sleep(0.1); 1", reply=True, timeout=2)
+        c2 = kc.execute("2", reply=True, timeout=2)
+        t2 = asyncio.create_task(c2)
+        await asyncio.sleep(0)
+        t1 = asyncio.create_task(c1)
+        r1,r2 = await asyncio.gather(t1, t2)
+        assert r1["header"]["msg_type"] == "execute_reply"
+        assert r2["header"]["msg_type"] == "execute_reply"
+        assert r1["content"]["status"] == "ok"
+        assert r2["content"]["status"] == "ok"
+

@@ -2,16 +2,16 @@ import json, struct
 from typing import Any, Dict
 from jupyter_client.jsonutil import json_default, extract_dates
 
-def dumps(msg: Dict[str, Any]) -> str: return json.dumps(msg, default=json_default)
+def dumps(msg): return json.dumps(msg, default=json_default)
 
-def loads(s: str) -> Dict[str, Any]:
+def loads(s: str):
     msg = json.loads(s)
     if isinstance(msg, dict):
         for k in ("header", "parent_header"):
             if isinstance(msg.get(k), dict): msg[k] = extract_dates(msg[k])
     return msg
 
-def serialize_binary_message(msg: Dict[str, Any]) -> bytes:
+def serialize_binary_message(msg):
     msg = msg.copy()
     buffers = list(msg.pop("buffers"))
     bmsg = dumps(msg).encode("utf8")
@@ -23,7 +23,7 @@ def serialize_binary_message(msg: Dict[str, Any]) -> bytes:
     buffers.insert(0, offsets_buf)
     return b"".join(buffers)
 
-def deserialize_binary_message(bmsg: bytes) -> Dict[str, Any]:
+def deserialize_binary_message(bmsg: bytes):
     nbufs = struct.unpack("!i", bmsg[:4])[0]
     offsets = list(struct.unpack("!" + "I" * nbufs, bmsg[4 : 4 * (nbufs + 1)]))
     offsets.append(None)
