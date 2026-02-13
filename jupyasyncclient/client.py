@@ -37,7 +37,8 @@ class JupyAsyncKernelClient:
         self._queues = {k: asyncio.Queue() for k in ("shell", "iopub", "stdin", "control")}
         self._reply_waiters = {k: {} for k in ("shell", "control")}
 
-    def _kpath(self, suffix=""):
+    def _kpath(self, suffix="", req_kid=False):
+        if req_kid and not self.kernel_id: raise RuntimeError("kernel_id required")
         res = '/api/kernels'
         if self.kernel_id: res += f'/{self.kernel_id}'
         return res + suffix
@@ -84,7 +85,6 @@ class JupyAsyncKernelClient:
 
     async def _start_ws(self):
         if self._ws and self._ws.close_code is None: return
-        if not self.kernel_id: raise RuntimeError("kernel_id required")
         params = {"session_id": self.session_id}
         if self.token: params["token"] = self.token
         ws_url = _join_url(self.base_url, self._kpath("/channels"), ws=True, params=params)
@@ -164,8 +164,7 @@ class JupyAsyncKernelClient:
         await self._ensure_started()
         q = self._queues[channel]
         try:
-            if timeout is None: return await q.get()
-            return await asyncio.wait_for(q.get(), timeout)
+            async with asyncio.timeout(timeout): return await q.get()
         except asyncio.TimeoutError as e: raise Empty from e
 
     async def get_shell_msg(self, timeout=None): return await self._get_msg("shell", timeout)
@@ -176,7 +175,6 @@ class JupyAsyncKernelClient:
     async def _await_reply_waiter(self, msg_id, fut, timeout=None, channel="shell"):
         try:
             async with asyncio.timeout(timeout): return await fut
-        except asyncio.TimeoutError as e: raise TimeoutError("Timeout waiting for reply") from e
         finally: self._reply_waiters[channel].pop(msg_id, None)
 
     async def wait_for_ready(self, timeout=None):
