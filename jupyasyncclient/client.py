@@ -175,19 +175,9 @@ class JupyAsyncKernelClient:
 
     async def _await_reply_waiter(self, msg_id, fut, timeout=None, channel="shell"):
         try:
-            if timeout is None: return await fut
             async with asyncio.timeout(timeout): return await fut
         except asyncio.TimeoutError as e: raise TimeoutError("Timeout waiting for reply") from e
-        finally:
-            if self._reply_waiters[channel].get(msg_id) is fut: self._reply_waiters[channel].pop(msg_id, None)
-
-    async def _async_recv_reply(self, msg_id, timeout=None, channel= "shell"):
-        await self._ensure_started()
-        if channel not in self._reply_waiters: raise ValueError(f"Unsupported reply channel: {channel}")
-        fut = self._reply_waiters[channel].get(msg_id)
-        if fut is None: raise RuntimeError(f"No pending reply waiter for msg_id={msg_id!r} on channel={channel!r}")
-        return await self._await_reply_waiter(msg_id, fut, timeout=timeout, channel=channel)
-    _recv_reply = _async_recv_reply
+        finally: self._reply_waiters[channel].pop(msg_id, None)
 
     async def wait_for_ready(self, timeout=None):
         await self._ensure_started()
@@ -204,7 +194,6 @@ class JupyAsyncKernelClient:
             msg = self.session.msg(name) if not kwargs else self.session.msg(name, kwargs)
             msg_id = msg["header"]["msg_id"]
             if not reply: return self._queue_msg(msg, channel)
-            if channel not in self._reply_waiters: raise ValueError(f"Unsupported reply channel: {channel}")
             fut = asyncio.get_running_loop().create_future()
             self._reply_waiters[channel][msg_id] = fut
             self._queue_msg(msg, channel)
