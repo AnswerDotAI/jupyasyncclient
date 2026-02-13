@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import asyncio
-from typing import Any, Dict, Optional, Type
+from typing import Any
 
 import httpx
 
@@ -39,48 +39,50 @@ class JupyAsyncMultiKernelManager:
         self._own_http = True
         return self._http
 
-    def _ensure_http_now(self) -> None:
-        if self._http and not self._http.is_closed: return
-        self._http = httpx.AsyncClient(headers=self._headers)
-        self._own_http = True
+    @staticmethod
+    def _kpath(kernel_id: str="", suffix: str="") -> str:
+        return f"/api/kernels/{kernel_id}{suffix}" if kernel_id else "/api/kernels"
 
     async def _request(self, method: str, path: str, **kwargs: Any) -> Any:
         http = self._ensure_http()
         r = await http.request(method, _join_url(self.base_url, path), **kwargs)
         r.raise_for_status()
-        if r.status_code == 204: return None
+        if r.status_code==204: return True
         ct = (r.headers.get("content-type") or "").split(";")[0]
         return r.json() if ct == "application/json" else r.text
 
+    async def kernel_request(self, method: str, kernel_id: str="", suffix: str="", **kwargs: Any) -> Any:
+        return await self._request(method, self._kpath(kernel_id, suffix), **kwargs)
+
     # --- kernel lifecycle ---
 
-    async def list_kernels(self) -> list[dict]: return await self._request("GET", "/api/kernels")
+    async def list_kernels(self) -> list[dict]: return await self.kernel_request("GET")
 
     async def list_kernel_ids(self) -> list[str]: return [k["id"] for k in await self.list_kernels()]
 
     async def start_kernel(self, kernel_name: str | None = None, **kwargs: Any) -> str:
         name = kernel_name or self.kernel_name
-        model = await self._request("POST", "/api/kernels", json={"name": name, **kwargs})
+        model = await self.kernel_request("POST", json={"name": name, **kwargs})
         kid = model["id"]
         self._owned.add(kid)
         return kid
 
     async def shutdown_kernel(self, kernel_id: str, now: bool = False, restart: bool = False) -> None:
-        try: await self._request("DELETE", f"/api/kernels/{kernel_id}")
+        try: await self.kernel_request("DELETE", kernel_id=kernel_id)
         finally:
             self._owned.discard(kernel_id)
             self._kernels.pop(kernel_id, None)
             for k, v in list(self._keys.items()):
                 if v == kernel_id: self._keys.pop(k, None)
 
-    async def interrupt_kernel(self, kernel_id: str) -> None: await self._request("POST", f"/api/kernels/{kernel_id}/interrupt")
+    async def interrupt_kernel(self, kernel_id: str) -> None: await self.kernel_request("POST", kernel_id=kernel_id, suffix="/interrupt")
 
     async def restart_kernel(self, kernel_id: str, now: bool = False, newports: bool = False, **kw: Any) -> dict:
-        return await self._request("POST", f"/api/kernels/{kernel_id}/restart")
+        return await self.kernel_request("POST", kernel_id=kernel_id, suffix="/restart")
 
     async def is_alive(self, kernel_id: str) -> bool:
         try:
-            await self._request("GET", f"/api/kernels/{kernel_id}")
+            await self.kernel_request("GET", kernel_id=kernel_id)
             return True
         except Exception: return False
 
@@ -110,7 +112,7 @@ class JupyAsyncMultiKernelManager:
     def get_kernel(self, kernel_id: str) -> JupyAsyncKernelManager:
         km = self._kernels.get(kernel_id)
         if km: return km
-        self._ensure_http_now()
+        self._ensure_http()
         km = self.kernel_manager_class(self.base_url, token=self.token, kernel_id=kernel_id,
             kernel_name=self.kernel_name, username=self.username, timeout=self._timeout, http_client=self._http)
         self._kernels[kernel_id] = km

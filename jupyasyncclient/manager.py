@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-import uuid
-from typing import Any, Dict, Optional, Type
+from uuid import uuid4
+from typing import Any
 from urllib.parse import urlencode, urlsplit, urlunsplit
 
 import httpx
@@ -30,29 +30,33 @@ class JupyAsyncKernelManager:
         self.kernel_name = kernel_name
         self.username = username
         self._timeout = timeout
-
         self._headers = {**(headers or {})}
         if self.token and "Authorization" not in self._headers: self._headers["Authorization"] = f"token {self.token}"
-
         self._http = http_client
-        self._own_http = http_client is None
 
     @property
     def has_kernel(self): return bool(self.kernel_id)
 
+    def _kpath(self, suffix=""):
+        if not self.kernel_id: raise RuntimeError("kernel_id required")
+        return f"/api/kernels/{self.kernel_id}{suffix}"
+
     def _ensure_http(self):
         if self._http and not self._http.is_closed: return self._http
         self._http = httpx.AsyncClient(headers=self._headers)
-        self._own_http = True
         return self._http
 
     async def _request(self, method, path, **kwargs):
         http = self._ensure_http()
         r = await http.request(method, _join_url(self.base_url, path), **kwargs)
         r.raise_for_status()
-        if r.status_code == 204: return None
+        if r.status_code==204: return True
         ct = (r.headers.get("content-type") or "").split(";")[0]
-        return r.json() if ct == "application/json" else r.text
+        return r.json() if ct=="application/json" else r.text
+
+    async def kernel_request(self, method, suffix="", **kwargs):
+        if not self.kernel_id: return None
+        return await self._request(method, self._kpath(suffix), **kwargs)
 
     async def start_kernel(self, kernel_name= None, **kwargs):
         name = kernel_name or self.kernel_name
@@ -61,40 +65,31 @@ class JupyAsyncKernelManager:
         self.kernel_name = model.get("name", name)
         return model
 
-    async def shutdown_kernel(self, now=False, restart= False):
-        if not self.kernel_id: return
-        try: await self._request("DELETE", f"/api/kernels/{self.kernel_id}")
+    async def shutdown_kernel(self, now=False, restart=False):
+        try: await self.kernel_request("DELETE")
         finally:
             if not restart: self.kernel_id = None
 
-    async def interrupt_kernel(self):
-        if self.kernel_id: await self._request("POST", f"/api/kernels/{self.kernel_id}/interrupt")
+    async def interrupt_kernel(self): return await self.kernel_request("POST", "/interrupt")
 
     async def restart_kernel(self, now=False, newports= False, **kw):
         if not self.kernel_id: raise RuntimeError("kernel_id required")
-        return await self._request("POST", f"/api/kernels/{self.kernel_id}/restart")
+        return await self.kernel_request("POST", "/restart")
 
     async def is_alive(self):
-        if not self.kernel_id: return False
-        try:
-            await self._request("GET", f"/api/kernels/{self.kernel_id}")
-            return True
+        try: return bool(await self.kernel_request("GET"))
         except Exception: return False
 
-    def client(self, **kwargs):
-        kernel_id = kwargs.pop("kernel_id", None) or self.kernel_id
+    def client(self, kernel_id=None, username=None, headers=None, timeout=None, http_client=None, session_id=None):
+        kernel_id = kernel_id or self.kernel_id
         if not kernel_id: raise RuntimeError("kernel_id required (call start_kernel first)")
-
         http = self._http if (self._http and not self._http.is_closed) else None
-        return self.client_class(self.base_url, kernel_id=kernel_id, token=self.token,
-            username=kwargs.pop("username", None) or self.username, headers=kwargs.pop("headers", None),
-            timeout=kwargs.pop("timeout", None) or self._timeout,
-            http_client=kwargs.pop("http_client", None) or http,
-            session_id=kwargs.pop("session_id", None) or uuid.uuid4().hex)
+        return self.client_class(self.base_url, kernel_id=kernel_id, token=self.token, username=username or self.username,
+            headers=headers, timeout=timeout or self._timeout, http_client=http_client or http, session_id=session_id or uuid4().hex)
 
     async def aclose(self):
         await self.shutdown_kernel(now=True)
-        if self._http and self._own_http and not self._http.is_closed: await self._http.aclose()
+        if self._http and not self._http.is_closed: await self._http.aclose()
 
     async def __aenter__(self):
         self._ensure_http()
@@ -106,12 +101,11 @@ class JupyAsyncKernelManager:
 async def start_new_server_kernel(base_url, token=None, kernel_name="python3", startup_timeout=60, **kwargs):
     km = JupyAsyncKernelManager(base_url, token=token, kernel_name=kernel_name)
     await km.start_kernel(kernel_name, **kwargs)
-    kc = km.client()
-    kc.start_channels()
+    kc = km.client().start_channels()
     try: await kc.wait_for_ready(timeout=startup_timeout)
     except Exception:
         await kc.aclose()
         await km.aclose()
         raise
-    return km, kc
+    return km,kc
 

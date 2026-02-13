@@ -1,6 +1,6 @@
 from jupyasyncclient import JupyAsyncMultiKernelManager
 
-TIMEOUT = 60
+TIMEOUT = 5
 
 
 class TestJupyAsyncMultiKernelManager:
@@ -16,7 +16,7 @@ class TestJupyAsyncMultiKernelManager:
             clients.append(kc)
             kc.start_channels()
             await kc.wait_for_ready(timeout=TIMEOUT)
-            rep = await kc.execute_interactive("2+2", timeout=TIMEOUT)
+            rep = await kc.execute("2+2", reply=True, timeout=TIMEOUT)
             assert rep["content"]["status"] == "ok"
 
             kidb = await mkm.ensure_kernel("b")
