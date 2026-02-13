@@ -29,6 +29,7 @@ include = ["jupyasyncclient"]
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
+addopts = "-n 3 --dist=loadfile"
 
 [tool.setuptools.dynamic]
 version = {attr = "jupyasyncclient.__version__"}

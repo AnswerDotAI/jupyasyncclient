@@ -1,4 +1,5 @@
 import os, socket, subprocess, sys, time, urllib.request, pytest
+from pathlib import Path
 
 
 def _free_port() -> int:
@@ -17,7 +18,6 @@ def jp_server(tmp_path_factory):
     runtime_dir,config_dir,data_dir,ipython_dir = [sandbox/p for p in ("runtime", "config", "data", "ipython")]
     for d in (runtime_dir, config_dir, data_dir, ipython_dir): d.mkdir(parents=True, exist_ok=True)
     base_url = f"http://127.0.0.1:{port}"
-
     cmd = [sys.executable, "-m", "jupyter_server", "--no-browser", f"--ServerApp.port={port}", "--ServerApp.port_retries=0",
            "--ServerApp.token=", "--ServerApp.password=", "--ServerApp.disable_check_xsrf=True", "--ServerApp.allow_root=True",
            f"--ServerApp.root_dir={root}", "--ServerApp.open_browser=False", "--ServerApp.log_level=50"]

@@ -186,46 +186,69 @@ class JupyAsyncKernelClient:
 
     # --- request/reply methods (AsyncKernelClient-style: return msg_id or awaitable) ---
 
+    def _exec_req(self, name, content=None, reply=False, timeout=None, channel="shell", metadata=None, subshell_id=None):
+        msg = self.session.msg(name, content, metadata=metadata)
+        if subshell_id: msg["header"]["subshell_id"] = subshell_id
+        msg_id = msg["header"]["msg_id"]
+        if not reply: return self._queue_msg(msg, channel)
+        fut = asyncio.get_running_loop().create_future()
+        self._reply_waiters[channel][msg_id] = fut
+        self._queue_msg(msg, channel)
+        return self._await_reply_waiter(msg_id, fut, timeout=timeout, channel=channel)
+
     def __getattr__(self, name):
         if name.startswith("_"): raise AttributeError(name)
-        def _f(reply=False, timeout=None, channel="shell", **kwargs):
-            msg = self.session.msg(name) if not kwargs else self.session.msg(name, kwargs)
-            msg_id = msg["header"]["msg_id"]
-            if not reply: return self._queue_msg(msg, channel)
-            fut = asyncio.get_running_loop().create_future()
-            self._reply_waiters[channel][msg_id] = fut
-            self._queue_msg(msg, channel)
-            return self._await_reply_waiter(msg_id, fut, timeout=timeout, channel=channel)
+        def _f(reply=False, timeout=None, channel="shell", metadata=None, subshell_id=None, **kwargs):
+            cts = kwargs or None
+            return self._exec_req(name, content=cts, reply=reply, timeout=timeout, channel=channel, metadata=metadata, subshell_id=subshell_id)
         return _f
 
+    # --- kernel subshells (ipykernel>=7) ---
+
+    def delete_subshell_request(self, subshell_id: str, reply=False, timeout=None, channel="control", metadata=None):
+        cts = {"subshell_id": subshell_id}
+        return self._exec_req("delete_subshell_request", content=cts, reply=reply, timeout=timeout, channel=channel, metadata=metadata)
+
+    def create_subshell(self, reply=False, timeout=None):
+        return self.create_subshell_request(reply=reply, timeout=timeout, channel="control")
+
+    def delete_subshell(self, subshell_id: str, reply=False, timeout=None):
+        return self.delete_subshell_request(subshell_id=subshell_id, reply=reply, timeout=timeout, channel="control")
+
+    def list_subshell(self, reply=False, timeout=None):
+        return self.list_subshell_request(reply=reply, timeout=timeout, channel="control")
+
     def execute(self, code, silent=False, store_history=True, user_expressions=None, allow_stdin=None,
-                stop_on_error=True, reply=False, timeout=None):
+                stop_on_error=True, reply=False, timeout=None, subshell_id=None):
         user_expressions = {} if user_expressions is None else user_expressions
         allow_stdin = self.allow_stdin if allow_stdin is None else allow_stdin
         if not isinstance(code, str): raise ValueError(f"code {code!r} must be a string")
         validate_string_dict(user_expressions)
         return self.execute_request(reply=reply, timeout=timeout, code=code, silent=silent, store_history=store_history,
-                                    user_expressions=user_expressions, allow_stdin=allow_stdin, stop_on_error=stop_on_error)
+                                    user_expressions=user_expressions, allow_stdin=allow_stdin, stop_on_error=stop_on_error, subshell_id=subshell_id)
 
-    def complete(self, code, cursor_pos=None, reply=False, timeout=None):
+    def complete(self, code, cursor_pos=None, reply=False, timeout=None, subshell_id=None):
         cursor_pos = len(code) if cursor_pos is None else cursor_pos
-        return self.complete_request(code=code, cursor_pos=cursor_pos, reply=reply, timeout=timeout)
+        return self.complete_request(code=code, cursor_pos=cursor_pos, reply=reply, timeout=timeout, subshell_id=subshell_id)
 
-    def inspect(self, code, cursor_pos=None, detail_level=0, reply=False, timeout=None):
+    def inspect(self, code, cursor_pos=None, detail_level=0, reply=False, timeout=None, subshell_id=None):
         cursor_pos = len(code) if cursor_pos is None else cursor_pos
-        return self.inspect_request(reply=reply, timeout=timeout, code=code, cursor_pos=cursor_pos, detail_level=detail_level)
+        return self.inspect_request(reply=reply, timeout=timeout, code=code, cursor_pos=cursor_pos, detail_level=detail_level, subshell_id=subshell_id)
 
-    def history(self, raw=True, output=False, hist_access_type="range", reply=False, timeout=None, **kwargs):
+    def history(self, raw=True, output=False, hist_access_type="range", reply=False, timeout=None, subshell_id=None, **kwargs):
         if hist_access_type=="range":
             kwargs.setdefault("session", 0)
             kwargs.setdefault("start", 0)
-        return self.history_request(reply=reply, timeout=timeout, raw=raw, output=output, hist_access_type=hist_access_type, **kwargs)
+        return self.history_request(reply=reply, timeout=timeout, raw=raw, output=output, hist_access_type=hist_access_type, subshell_id=subshell_id, **kwargs)
 
-    def comm_info(self, target_name=None, reply=False, timeout=None):
-        return self.comm_info_request(reply=reply, timeout=timeout, target_name=target_name)
+    def comm_info(self, target_name=None, reply=False, timeout=None, subshell_id=None):
+        return self.comm_info_request(reply=reply, timeout=timeout, target_name=target_name, subshell_id=subshell_id)
 
-    def kernel_info(self, reply=False, timeout=None): return self.kernel_info_request(reply=reply, timeout=timeout)
-    def is_complete(self, code, reply=False, timeout=None): return self.is_complete_request(code=code, reply=reply, timeout=timeout)
+    def kernel_info(self, reply=False, timeout=None, subshell_id=None):
+        return self.kernel_info_request(reply=reply, timeout=timeout, subshell_id=subshell_id)
+
+    def is_complete(self, code, reply=False, timeout=None, subshell_id=None):
+        return self.is_complete_request(code=code, reply=reply, timeout=timeout, subshell_id=subshell_id)
     def input(self, string: str): self.input_reply(value=string, channel="stdin")
     def shutdown(self, restart=False, reply=False, timeout=None):
         return self.shutdown_request(restart=restart, reply=reply, timeout=timeout, channel="control")
