@@ -1,4 +1,5 @@
 import asyncio, httpx, pytest
+from queue import Empty
 from jupyasyncclient import JupyAsyncKernelClient
 
 TIMEOUT = 5
@@ -55,6 +56,28 @@ class TestJupyAsyncKernelClient:
         assert r2["header"]["msg_type"]=="execute_reply"
         assert r1["content"]["status"]=="ok"
         assert r2["content"]["status"]=="ok"
+
+    async def test_concurrent_replies_after_orphan_execute(self, kc):
+        while True:
+            try: await kc.get_iopub_msg(timeout=0.05)
+            except Empty: break
+        kc.execute("print('orphan')", reply=False)
+        await asyncio.sleep(0.3)
+        slow = kc.execute("import time; time.sleep(0.3)", reply=True, timeout=TIMEOUT)
+        fast = kc.execute("1+1", reply=True, timeout=TIMEOUT)
+        rslow,rfast = await asyncio.gather(slow, fast)
+        assert rslow["header"]["msg_type"]=="execute_reply"
+        assert rfast["header"]["msg_type"]=="execute_reply"
+        assert rslow["content"]["status"]=="ok"
+        assert rfast["content"]["status"]=="ok"
+
+    async def test_two_execute_reply_coroutines_can_be_awaited_together(self, kc):
+        a = kc.execute("x=2", reply=True, timeout=TIMEOUT)
+        b = kc.execute("y=3", reply=True, timeout=TIMEOUT)
+        reps = await asyncio.wait_for(asyncio.gather(a,b), timeout=2)
+        assert len(reps)==2
+        assert all(rep["header"]["msg_type"]=="execute_reply" for rep in reps)
+        assert len({rep["parent_header"]["msg_id"] for rep in reps})==2
 
 
     async def test_start_kernel_and_shutdown_kernel_http_helpers(self, jp_server):
