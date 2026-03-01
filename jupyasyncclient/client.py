@@ -6,6 +6,7 @@ from urllib.parse import urlencode, urlsplit, urlunsplit
 
 from jupyter_client.client import validate_string_dict
 from jupyter_client.session import Session
+from fastcore.meta import use_kwargs_dict
 
 from ._ws import deserialize_binary_message, dumps, loads, serialize_binary_message
 
@@ -19,11 +20,12 @@ def _join_url(base, path, ws=False, params=None):
     return urlunsplit((scheme, u.netloc, full_path, query, ""))
 
 
+_replkw = dict(reply=False, timeout=None)
+_subskw = dict(**_replkw, subshell_id=None)
+
 class JupyAsyncKernelClient:
     "AsyncKernelClient-ish API over Jupyter Server HTTP + websocket."
-
     allow_stdin = True
-
     def __init__(self, base_url, kernel_id=None, token=None, session_id=None, username=None,
                  headers=None, timeout=30, http_client=None):
         self.kernel_id,self.token,self.base_url = kernel_id,token or "",base_url.rstrip("/")
@@ -42,8 +44,6 @@ class JupyAsyncKernelClient:
         res = '/api/kernels'
         if self.kernel_id: res += f'/{self.kernel_id}'
         return res + suffix
-
-    # --- HTTP ---
 
     def _ensure_http(self):
         if self._http and not self._http.is_closed: return self._http
@@ -74,8 +74,6 @@ class JupyAsyncKernelClient:
     async def is_alive(self):
         try: return bool(await self.kernel_request("GET"))
         except Exception: return False
-
-    # --- websocket channels ---
 
     def start_channels(self, shell=True, iopub=True, stdin=True, control=True):
         if not (shell or iopub or stdin or control): return
@@ -158,8 +156,6 @@ class JupyAsyncKernelClient:
         self._send_q.put_nowait(payload)
         return msg["header"]["msg_id"]
 
-    # --- message getters ---
-
     async def _get_msg(self, channel, timeout=None):
         await self._ensure_started()
         q = self._queues[channel]
@@ -184,9 +180,7 @@ class JupyAsyncKernelClient:
             try: await self.get_iopub_msg(timeout=0.05)
             except Empty: return
 
-    # --- request/reply methods (AsyncKernelClient-style: return msg_id or awaitable) ---
-
-    def _exec_req(self, name, content=None, reply=False, timeout=None, channel="shell", metadata=None, subshell_id=None):
+    def _exec_req(self, name, content=None, channel="shell", metadata=None, reply=False, timeout=None, subshell_id=None):
         msg = self.session.msg(name, content, metadata=metadata)
         if subshell_id: msg["header"]["subshell_id"] = subshell_id
         msg_id = msg["header"]["msg_id"]
@@ -199,56 +193,52 @@ class JupyAsyncKernelClient:
     def __getattr__(self, name):
         if name.startswith("_"): raise AttributeError(name)
         def _f(reply=False, timeout=None, channel="shell", metadata=None, subshell_id=None, **kwargs):
-            cts = kwargs or None
-            return self._exec_req(name, content=cts, reply=reply, timeout=timeout, channel=channel, metadata=metadata, subshell_id=subshell_id)
+            return self._exec_req(name, content=kwargs or None, reply=reply, timeout=timeout, channel=channel, metadata=metadata, subshell_id=subshell_id)
         return _f
 
-    # --- kernel subshells (ipykernel>=7) ---
+    @use_kwargs_dict(**_replkw)
+    def create_subshell(self, **kwargs): return self.create_subshell_request(channel="control", **kwargs)
+    @use_kwargs_dict(**_replkw)
+    def list_subshell(self, **kwargs): return self.list_subshell_request(channel="control", **kwargs)
+    @use_kwargs_dict(**_replkw)
+    def delete_subshell_request(self, subshell_id: str, metadata=None, **kwargs):
+        return self._exec_req("delete_subshell_request", content={"subshell_id": subshell_id}, channel="control", metadata=metadata, **kwargs)
+    @use_kwargs_dict(**_replkw)
+    def delete_subshell(self, subshell_id: str, **kwargs): return self.delete_subshell_request(subshell_id=subshell_id, **kwargs)
 
-    def delete_subshell_request(self, subshell_id: str, reply=False, timeout=None, channel="control", metadata=None):
-        cts = {"subshell_id": subshell_id}
-        return self._exec_req("delete_subshell_request", content=cts, reply=reply, timeout=timeout, channel=channel, metadata=metadata)
-
-    def create_subshell(self, reply=False, timeout=None):
-        return self.create_subshell_request(reply=reply, timeout=timeout, channel="control")
-
-    def delete_subshell(self, subshell_id: str, reply=False, timeout=None):
-        return self.delete_subshell_request(subshell_id=subshell_id, reply=reply, timeout=timeout, channel="control")
-
-    def list_subshell(self, reply=False, timeout=None):
-        return self.list_subshell_request(reply=reply, timeout=timeout, channel="control")
-
-    def execute(self, code, silent=False, store_history=True, user_expressions=None, allow_stdin=None,
-                stop_on_error=True, reply=False, timeout=None, subshell_id=None):
+    @use_kwargs_dict(**_subskw)
+    def execute(self, code, silent=False, store_history=True, user_expressions=None, allow_stdin=None, stop_on_error=True, **kwargs):
         user_expressions = {} if user_expressions is None else user_expressions
         allow_stdin = self.allow_stdin if allow_stdin is None else allow_stdin
         if not isinstance(code, str): raise ValueError(f"code {code!r} must be a string")
         validate_string_dict(user_expressions)
-        return self.execute_request(reply=reply, timeout=timeout, code=code, silent=silent, store_history=store_history,
-                                    user_expressions=user_expressions, allow_stdin=allow_stdin, stop_on_error=stop_on_error, subshell_id=subshell_id)
+        return self.execute_request(code=code, silent=silent, store_history=store_history, user_expressions=user_expressions,
+                                    allow_stdin=allow_stdin, stop_on_error=stop_on_error, **kwargs)
 
-    def complete(self, code, cursor_pos=None, reply=False, timeout=None, subshell_id=None):
+    @use_kwargs_dict(**_subskw)
+    def complete(self, code, cursor_pos=None, **kwargs):
         cursor_pos = len(code) if cursor_pos is None else cursor_pos
-        return self.complete_request(code=code, cursor_pos=cursor_pos, reply=reply, timeout=timeout, subshell_id=subshell_id)
+        return self.complete_request(code=code, cursor_pos=cursor_pos, **kwargs)
 
-    def inspect(self, code, cursor_pos=None, detail_level=0, reply=False, timeout=None, subshell_id=None):
+    @use_kwargs_dict(**_subskw)
+    def inspect(self, code, cursor_pos=None, detail_level=0, **kwargs):
         cursor_pos = len(code) if cursor_pos is None else cursor_pos
-        return self.inspect_request(reply=reply, timeout=timeout, code=code, cursor_pos=cursor_pos, detail_level=detail_level, subshell_id=subshell_id)
+        return self.inspect_request(code=code, cursor_pos=cursor_pos, detail_level=detail_level, **kwargs)
 
-    def history(self, raw=True, output=False, hist_access_type="range", reply=False, timeout=None, subshell_id=None, **kwargs):
+    @use_kwargs_dict(**_subskw, keep=True)
+    def history(self, raw=True, output=False, hist_access_type="range", **kwargs):
         if hist_access_type=="range":
             kwargs.setdefault("session", 0)
             kwargs.setdefault("start", 0)
-        return self.history_request(reply=reply, timeout=timeout, raw=raw, output=output, hist_access_type=hist_access_type, subshell_id=subshell_id, **kwargs)
+        return self.history_request(raw=raw, output=output, hist_access_type=hist_access_type, **kwargs)
 
-    def comm_info(self, target_name=None, reply=False, timeout=None, subshell_id=None):
-        return self.comm_info_request(reply=reply, timeout=timeout, target_name=target_name, subshell_id=subshell_id)
-
-    def kernel_info(self, reply=False, timeout=None, subshell_id=None):
-        return self.kernel_info_request(reply=reply, timeout=timeout, subshell_id=subshell_id)
-
-    def is_complete(self, code, reply=False, timeout=None, subshell_id=None):
-        return self.is_complete_request(code=code, reply=reply, timeout=timeout, subshell_id=subshell_id)
+    @use_kwargs_dict(**_subskw)
+    def comm_info(self, target_name=None, **kwargs): return self.comm_info_request(target_name=target_name, **kwargs)
+    @use_kwargs_dict(**_subskw)
+    def kernel_info(self, **kwargs): return self.kernel_info_request(**kwargs)
+    @use_kwargs_dict(**_subskw)
+    def is_complete(self, code, **kwargs): return self.is_complete_request(code=code, **kwargs)
     def input(self, string: str): self.input_reply(value=string, channel="stdin")
-    def shutdown(self, restart=False, reply=False, timeout=None):
-        return self.shutdown_request(restart=restart, reply=reply, timeout=timeout, channel="control")
+    @use_kwargs_dict(**_replkw)
+    def shutdown(self, restart=False, **kwargs): return self.shutdown_request(restart=restart, channel="control", **kwargs)
+

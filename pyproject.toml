@@ -13,6 +13,7 @@ dynamic = ["version"]
 dependencies = [
   "jupyter_client>=8.0",
   "httpx>=0.27",
+  "fastcore",
   "websockets>=13",
 ]
 
