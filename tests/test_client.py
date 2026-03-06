@@ -1,6 +1,7 @@
 import asyncio, httpx, pytest
 from queue import Empty
 from jupyasyncclient import JupyAsyncKernelClient
+from jupyasyncclient._ws import dumps
 
 TIMEOUT = 5
 
@@ -78,6 +79,38 @@ class TestJupyAsyncKernelClient:
         assert len(reps)==2
         assert all(rep["header"]["msg_type"]=="execute_reply" for rep in reps)
         assert len({rep["parent_header"]["msg_id"] for rep in reps})==2
+
+    async def test_execute_reply_cancelled_before_first_step_does_not_register_waiter(self):
+        kc = JupyAsyncKernelClient("http://127.0.0.1:1", kernel_id="k")
+        coro = kc.execute("1", reply=True, timeout=0.2)
+        assert not kc._reply_waiters["shell"]
+        task = asyncio.create_task(coro)
+        task.cancel()
+        with pytest.raises(asyncio.CancelledError): await task
+        assert not kc._reply_waiters["shell"]
+        assert kc._send_q.empty()
+
+    async def test_timed_out_execute_reply_is_dropped_if_it_arrives_late(self):
+        class _OneMsgWS:
+            def __init__(self, payload): self.payload,self._done = payload,False
+            def __aiter__(self): return self
+            async def __anext__(self):
+                if self._done: raise StopAsyncIteration
+                self._done = True
+                return self.payload
+
+        kc = JupyAsyncKernelClient("http://127.0.0.1:1", kernel_id="k")
+        t = asyncio.create_task(kc.execute("1", reply=True, timeout=0.01))
+        await asyncio.sleep(0)
+        [msg_id] = kc._reply_waiters["shell"].keys()
+        with pytest.raises(TimeoutError): await t
+
+        late = dict(channel="shell", metadata={}, content=dict(status="ok", execution_count=1))
+        late["header"] = dict(msg_id="late-reply", msg_type="execute_reply")
+        late["parent_header"] = dict(msg_id=msg_id, msg_type="execute_request")
+        kc._ws = _OneMsgWS(dumps(late))
+        await kc._recv_loop()
+        assert kc._queues["shell"].empty()
 
 
     async def test_start_kernel_and_shutdown_kernel_http_helpers(self, jp_server):

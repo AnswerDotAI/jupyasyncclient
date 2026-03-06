@@ -38,6 +38,7 @@ class JupyAsyncKernelClient:
         self._send_q = asyncio.Queue()
         self._queues = {k: asyncio.Queue() for k in ("shell", "iopub", "stdin", "control")}
         self._reply_waiters = {k: {} for k in ("shell", "control")}
+        self._stale_replies = {k: set() for k in ("shell", "control")}
 
     def _kpath(self, suffix="", req_kid=False):
         if req_kid and not self.kernel_id: raise RuntimeError("kernel_id required")
@@ -108,6 +109,7 @@ class JupyAsyncKernelClient:
             for fut in d.values():
                 if not fut.done(): fut.cancel()
             d.clear()
+        for s in self._stale_replies.values(): s.clear()
         self._ws = None
         if self._http and not self._http.is_closed: await self._http.aclose()
 
@@ -126,18 +128,24 @@ class JupyAsyncKernelClient:
                 if isinstance(data, str): msg = loads(data)
                 elif isinstance(data, bytes): msg = deserialize_binary_message(data)
                 else: continue
-                channel = msg.pop("channel", None) or "shell"
-                msg.setdefault("msg_id", msg.get("header", {}).get("msg_id"))
-                msg.setdefault("msg_type", msg.get("header", {}).get("msg_type"))
-                msg.setdefault("buffers", [])
-                parent_msg_id = msg.get("parent_header", {}).get("msg_id")
-                if channel in self._reply_waiters and parent_msg_id:
-                    fut = self._reply_waiters[channel].pop(parent_msg_id, None)
-                    if fut and not fut.done():
-                        fut.set_result(msg)
-                        continue
-                q = self._queues.get(channel)
-                if q: q.put_nowait(msg)
+                self._route_reply_or_queue(msg)
+
+    def _route_reply_or_queue(self, msg):
+        channel = msg.pop("channel", None) or "shell"
+        msg.setdefault("msg_id", msg.get("header", {}).get("msg_id"))
+        msg.setdefault("msg_type", msg.get("header", {}).get("msg_type"))
+        msg.setdefault("buffers", [])
+        parent_msg_id = msg.get("parent_header", {}).get("msg_id")
+        if channel in self._reply_waiters and parent_msg_id:
+            fut = self._reply_waiters[channel].pop(parent_msg_id, None)
+            if fut and not fut.done():
+                fut.set_result(msg)
+                return
+            if parent_msg_id in self._stale_replies[channel]:
+                self._stale_replies[channel].discard(parent_msg_id)
+                return
+        q = self._queues.get(channel)
+        if q: q.put_nowait(msg)
 
     async def _ensure_started(self):
         if not self._start_task: self.start_channels()
@@ -168,10 +176,15 @@ class JupyAsyncKernelClient:
     async def get_stdin_msg(self, timeout=None): return await self._get_msg("stdin", timeout)
     async def get_control_msg(self, timeout=None): return await self._get_msg("control", timeout)
 
-    async def _await_reply_waiter(self, msg_id, fut, timeout=None, channel="shell"):
+    async def _send_and_await_reply(self, msg, msg_id, timeout=None, channel="shell"):
+        fut = asyncio.get_running_loop().create_future()
+        self._reply_waiters[channel][msg_id] = fut
+        self._queue_msg(msg, channel)
         try:
             async with asyncio.timeout(timeout): return await fut
-        finally: self._reply_waiters[channel].pop(msg_id, None)
+        finally:
+            popped = self._reply_waiters[channel].pop(msg_id, None)
+            if popped is fut and (not fut.done() or fut.cancelled()): self._stale_replies[channel].add(msg_id)
 
     async def wait_for_ready(self, timeout=None):
         await self._ensure_started()
@@ -185,10 +198,7 @@ class JupyAsyncKernelClient:
         if subshell_id: msg["header"]["subshell_id"] = subshell_id
         msg_id = msg["header"]["msg_id"]
         if not reply: return self._queue_msg(msg, channel)
-        fut = asyncio.get_running_loop().create_future()
-        self._reply_waiters[channel][msg_id] = fut
-        self._queue_msg(msg, channel)
-        return self._await_reply_waiter(msg_id, fut, timeout=timeout, channel=channel)
+        return self._send_and_await_reply(msg, msg_id, timeout=timeout, channel=channel)
 
     def __getattr__(self, name):
         if name.startswith("_"): raise AttributeError(name)
@@ -241,4 +251,3 @@ class JupyAsyncKernelClient:
     def input(self, string: str): self.input_reply(value=string, channel="stdin")
     @use_kwargs_dict(**_replkw)
     def shutdown(self, restart=False, **kwargs): return self.shutdown_request(restart=restart, channel="control", **kwargs)
-
