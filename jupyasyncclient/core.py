@@ -9,12 +9,13 @@ __all__ = ['log', 'dumps', 'loads', 'serialize_binary_message', 'deserialize_bin
            'JupyAsyncKernelClient']
 
 # %% ../nbs/00_core.ipynb #a0271b3e
-import asyncio, json, logging, os, struct, uuid, httpx, websockets
+import asyncio, json, logging, os, time, uuid, httpx, websockets
 from contextlib import suppress
 from queue import Empty
 from urllib.parse import urlencode, urlsplit, urlunsplit
 from jupyter_client.client import validate_string_dict
-from jupyter_client.jsonutil import json_default, extract_dates
+from fastcore.basics import xdumps, revive_dates
+from fastcore.nbio import pack_frames, unpack_frames
 from jupyter_client.session import Session
 from fastcore.basics import patch
 from fastcore.meta import use_kwargs_dict
@@ -23,36 +24,28 @@ from fastcore.meta import use_kwargs_dict
 log = logging.getLogger('jupyasyncclient')
 
 # %% ../nbs/00_core.ipynb #3e850d28
-def dumps(msg): return json.dumps(msg, default=json_default)
+def dumps(msg): return xdumps(msg)
 
 def loads(s: str):
     msg = json.loads(s)
     if isinstance(msg, dict):
         for k in ("header", "parent_header"):
-            if isinstance(msg.get(k), dict): msg[k] = extract_dates(msg[k])
+            if isinstance(msg.get(k), dict): msg[k] = revive_dates(msg[k])
     return msg
+
 
 # %% ../nbs/00_core.ipynb #26fed730
 def serialize_binary_message(msg):
     msg = msg.copy()
-    buffers = list(msg.pop("buffers"))
-    bmsg = dumps(msg).encode("utf8")
-    buffers.insert(0, bmsg)
-    nbufs = len(buffers)
-    offsets = [4 * (nbufs + 1)]
-    for buf in buffers[:-1]: offsets.append(offsets[-1] + len(buf))
-    offsets_buf = struct.pack("!" + "I" * (nbufs + 1), nbufs, *offsets)
-    buffers.insert(0, offsets_buf)
-    return b"".join(buffers)
+    buffers = msg.pop("buffers")
+    return pack_frames(dumps(msg).encode("utf8"), buffers)
 
 def deserialize_binary_message(bmsg: bytes):
-    nbufs = struct.unpack("!i", bmsg[:4])[0]
-    offsets = list(struct.unpack("!" + "I" * nbufs, bmsg[4 : 4 * (nbufs + 1)]))
-    offsets.append(None)
-    bufs = [bmsg[start:stop] for start, stop in zip(offsets[:-1], offsets[1:])]
-    msg = loads(bufs[0].decode("utf8"))
-    msg["buffers"] = [memoryview(b) for b in bufs[1:]]
+    body, bufs = unpack_frames(bmsg)
+    msg = loads(body.decode("utf8"))
+    msg["buffers"] = [memoryview(b) for b in bufs]
     return msg
+
 
 # %% ../nbs/00_core.ipynb #23408417
 def _join_url(base, path, ws=False, params=None):
@@ -96,12 +89,14 @@ class KernelApi:
 class JupyAsyncKernelClient(KernelApi):
     "AsyncKernelClient-ish API over the kernels HTTP API plus its websocket channels."
     allow_stdin = True
-    def __init__(self, base_url, kernel_id=None, token=None, session_id=None, username=None, headers=None, timeout=30, http_client=None):
+    def __init__(self, base_url, kernel_id=None, token=None, session_id=None, username=None, headers=None, timeout=30, http_client=None,
+        reconnect=True, reconnect_ceiling=300.0):
         super().__init__(base_url, token=token, headers=headers, timeout=timeout, http_client=http_client)
         self.kernel_id = kernel_id
         self.session_id = session_id or uuid.uuid4().hex
         self.session = Session(session=self.session_id, username=username or os.environ.get("USER") or "")
         self._ws,self._start_task,self._send_task,self._recv_task,self._close_task = [None]*5
+        self.reconnect,self.reconnect_ceiling,self._unsent,self._closing = reconnect,reconnect_ceiling,None,False
         self._send_q = asyncio.Queue()
         self._queues = {k: asyncio.Queue() for k in ("shell", "iopub", "stdin", "control")}
         self._reply_waiters = {k: {} for k in ("shell", "control")}
@@ -199,12 +194,14 @@ async def _get_msg(self: JupyAsyncKernelClient, channel, timeout=None):
 async def _send_loop(self: JupyAsyncKernelClient):
     assert self._ws is not None
     while True:
-        payload = await self._send_q.get()
+        payload = self._unsent if self._unsent is not None else await self._send_q.get()
         if payload is None: return
+        self._unsent = payload
         try: await self._ws.send(payload)
         except Exception as e:
             log.warning("websocket send failed: %s", e)
-            return
+            return  # the payload stays in `_unsent`: a reconnected send loop retries it first
+        self._unsent = None
 
 @patch
 async def _recv_loop(self: JupyAsyncKernelClient):
@@ -215,11 +212,14 @@ async def _recv_loop(self: JupyAsyncKernelClient):
             elif isinstance(data, bytes): msg = deserialize_binary_message(data)
             else: continue
             self._route_reply_or_queue(msg)
+    if self.reconnect and not self._closing: self._start_task = asyncio.create_task(self._reconnect())
 
 # %% ../nbs/00_core.ipynb #3cd67196
 @patch
 async def _start_ws(self: JupyAsyncKernelClient):
     if self._ws and self._ws.close_code is None: return
+    for t in (self._send_task, self._recv_task):
+        if t and not t.done(): t.cancel()  # a stale send loop must not steal payloads from the new one
     params = {"session_id": self.session_id}
     if self.token: params["token"] = self.token
     ws_url = _join_url(self.base_url, self._kpath(suffix="/channels"), ws=True, params=params)
@@ -367,6 +367,28 @@ def kernel_info(self: JupyAsyncKernelClient, **kwargs): return self.kernel_info_
 @use_kwargs_dict(**_subskw)
 def is_complete(self: JupyAsyncKernelClient, code, **kwargs): return self.is_complete_request(code=code, **kwargs)
 
+# %% ../nbs/00_core.ipynb #97540d7e
+@patch
+async def _reconnect(self: JupyAsyncKernelClient):
+    "Redial with the same session id, with backoff; on a dead kernel or an expired ceiling, fail the pending futures."
+    deadline, delay = time.monotonic() + self.reconnect_ceiling, 0.1
+    while not self._closing:
+        try:
+            await self._start_ws()
+            log.info("websocket reconnected")
+            return
+        except Exception as e:
+            exc = None
+            try: await self.kernel_request('GET')
+            except httpx.HTTPStatusError as he: exc = RuntimeError(f'kernel {self.kernel_id} is gone: {he}')
+            except Exception: pass  # the server is unreachable too: keep trying until the ceiling
+            if exc is None and time.monotonic() > deadline: exc = ConnectionError(f'gave up reconnecting after {self.reconnect_ceiling}s: {e}')
+            if exc:
+                for c in ('shell','control'): self._fail_pending(exc, c)
+                raise exc
+            await asyncio.sleep(delay)
+            delay = min(delay*2, 5.0)
+
 # %% ../nbs/00_core.ipynb #893a89e0
 @patch
 @use_kwargs_dict(**_replkw)
@@ -376,10 +398,11 @@ def shutdown(self: JupyAsyncKernelClient, restart=False, **kwargs):
 # %% ../nbs/00_core.ipynb #8dccd345
 @patch
 async def aclose(self: JupyAsyncKernelClient):
-    for t in (self._send_task, self._recv_task):
+    self._closing = True
+    for t in (self._start_task, self._send_task, self._recv_task):
         if t and not t.done(): t.cancel()
     if self._ws and self._ws.close_code is None: await self._ws.close()
-    for t in (self._send_task, self._recv_task):
+    for t in (self._start_task, self._send_task, self._recv_task):
         if t:
             with suppress(asyncio.CancelledError, Exception): await t
     for d in self._reply_waiters.values():

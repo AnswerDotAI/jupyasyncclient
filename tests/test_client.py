@@ -99,7 +99,7 @@ class TestJupyAsyncKernelClient:
                 self._done = True
                 return self.payload
 
-        kc = JupyAsyncKernelClient("http://127.0.0.1:1", kernel_id="k")
+        kc = JupyAsyncKernelClient("http://127.0.0.1:1", kernel_id="k", reconnect=False)
         t = asyncio.create_task(kc.execute("1", reply=True, timeout=0.01))
         await asyncio.sleep(0)
         [msg_id] = kc._reply_waiters["shell"].keys()
@@ -125,3 +125,20 @@ class TestJupyAsyncKernelClient:
             await kc.shutdown_kernel()
             assert not await kc.is_alive()
         finally: await kc.aclose()
+
+
+    async def test_reconnect_survives_drop_and_gives_up_when_kernel_dies(self, kc):
+        "A pending reply resolves across a forced disconnect (jupyter_server buffers and replays); once the kernel is gone, pending futures fail fast."
+        t = asyncio.create_task(kc.execute("import time; time.sleep(1); 'back'", reply=True, timeout=30))
+        await asyncio.sleep(0.3)
+        kc._ws.transport.abort()                # the network dies mid-cell
+        rep = await t
+        assert rep["content"]["status"] == "ok"
+        rep = await kc.execute("1+1", reply=True, timeout=TIMEOUT)  # live traffic flows again on the redialed socket
+        assert rep["content"]["status"] == "ok"
+        kc.reconnect_ceiling = 10
+        t = asyncio.create_task(kc.execute("import time; time.sleep(30)", reply=True, timeout=60))
+        await asyncio.sleep(0.3)
+        await kc.shutdown_kernel()              # the kernel goes away for real...
+        kc._ws.transport.abort()                # ...and then the connection dies
+        with pytest.raises(RuntimeError, match="gone"): await t
