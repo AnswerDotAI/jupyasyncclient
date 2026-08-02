@@ -1,0 +1,14 @@
+project:
+  output-dir: _docs
+
+website:
+  title: "jupyasyncclient"
+  site-url: "https://AnswerDotAI.github.io/jupyasyncclient"
+  description: "Async kernel client for Jupyter kernel servers over HTTP and websockets"
+  repo-branch: main
+  repo-url: "https://github.com/AnswerDotAI/jupyasyncclient"
+
+format-links:
+  - html
+  - format: commonmark
+    text: Markdown

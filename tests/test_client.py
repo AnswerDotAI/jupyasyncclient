@@ -1,7 +1,7 @@
 import asyncio, httpx, pytest
 from queue import Empty
 from jupyasyncclient import JupyAsyncKernelClient
-from jupyasyncclient._ws import dumps
+from jupyasyncclient.core import dumps
 
 TIMEOUT = 5
 

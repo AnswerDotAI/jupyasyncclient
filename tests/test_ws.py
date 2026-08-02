@@ -1,7 +1,7 @@
 
 from datetime import datetime, timezone
 
-from jupyasyncclient._ws import deserialize_binary_message, dumps, loads, serialize_binary_message
+from jupyasyncclient.core import deserialize_binary_message, dumps, loads, serialize_binary_message
 
 
 def test_ws_dumps_loads_roundtrip_extracts_dates():
