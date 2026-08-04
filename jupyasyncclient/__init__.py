@@ -1,4 +1,4 @@
-__version__ = '0.2.0'
+__version__ = "0.2.1"
 
 from .core import JupyAsyncKernelClient, dumps, loads, serialize_binary_message, deserialize_binary_message
 from .manager import JupyAsyncKernelManager, start_new_server_kernel
