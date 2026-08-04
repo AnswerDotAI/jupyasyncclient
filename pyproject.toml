@@ -11,7 +11,7 @@ license = {text = "Apache-2"}
 authors = [{name = "Jeremy Howard"}]
 dynamic = ["version"]
 dependencies = [
-  "jupyter_client>=8.0",
+  "jupywire>=0.0.1",
   "httpx>=0.27",
   "fastcore>=2.1.17",
   "websockets>=13",
@@ -36,6 +36,7 @@ dev = [
   "pytest-timeout",
   "jupygate>=0.0.1",
   "ipymini>=0.1.17",
+  "ipyfuncs>=0.0.1",
 ]
 
 [tool.setuptools.packages.find]
