@@ -2,6 +2,13 @@
 
 <!-- do not remove -->
 
+## 0.2.1
+
+### New Features
+
+- Add Run streaming execution API and connect/context-manager startup; add JupyAsyncTerminalClient; make complete/inspect/check awaited helpers ([#4](https://github.com/AnswerDotAI/jupyasyncclient/issues/4))
+
+
 ## 0.2.0
 
 ### New Features
@@ -13,4 +20,3 @@
 ## 0.1.0
 
 - Init release
-
