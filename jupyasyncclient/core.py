@@ -424,7 +424,7 @@ async def _reconnect(self: JupyAsyncKernelClient):
         except Exception as e:
             exc = None
             try: await self.kernel_request('GET')
-            except httpx.HTTPStatusError as he: exc = RuntimeError(f'kernel {self.kernel_id} is gone: {he}')
+            except httpx.HTTPStatusError as he: exc = DeadKernelError(f'kernel {self.kernel_id} is gone: {he}')
             except Exception: pass  # the server is unreachable too: keep trying until the ceiling
             if exc is None and time.monotonic() > deadline: exc = ConnectionError(f'gave up reconnecting after {self.reconnect_ceiling}s: {e}')
             if exc:
