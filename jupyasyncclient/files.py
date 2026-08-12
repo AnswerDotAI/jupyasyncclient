@@ -12,7 +12,7 @@ __all__ = ['HashMismatch', 'JupyAsyncFilesClient', 'JupyAsyncCellsClient', 'appl
 # %% ../nbs/02_files.ipynb #edf8880c
 import httpx
 from base64 import b64encode, b64decode
-from fastcore.basics import patch
+from fastcore.basics import patch, patch_to
 from .core import KernelApi
 
 # %% ../nbs/02_files.ipynb #89287e61
@@ -53,6 +53,11 @@ async def post(self:JupyAsyncFilesClient, path, expected_hash=None, **kwargs):
     "POST with `kwargs` as the JSON body."
     return await self._creq('POST', path, expected_hash=expected_hash, json=kwargs)
 
+@patch_to(JupyAsyncFilesClient)
+async def patch(self, path, /, expected_hash=None, **kwargs):
+    "PATCH with `kwargs` as the JSON body; `path` is positional-only, freeing the name for the body."
+    return await self._creq('PATCH', path, expected_hash=expected_hash, json=kwargs)
+
 
 # %% ../nbs/02_files.ipynb #a85d5ed9
 @patch
@@ -82,7 +87,7 @@ async def mkdir(self:JupyAsyncFilesClient, path):
 @patch
 async def rename(self:JupyAsyncFilesClient, path, to):
     "Rename `path` to `to`, returning the new model."
-    return await self._creq('PATCH', path, json=dict(path=to))
+    return await self.patch(path, path=to)
 
 @patch
 async def copy(self:JupyAsyncFilesClient, src, to):
