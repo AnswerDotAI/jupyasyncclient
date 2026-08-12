@@ -2,6 +2,13 @@
 
 <!-- do not remove -->
 
+## 0.2.3
+
+### New Features
+
+- Merge iopub/stdin/cells into one jmsg stream with `jmsg_for`; add `kernel_for`, custom `msg_id`, `max_size` ([#7](https://github.com/AnswerDotAI/jupyasyncclient/issues/7))
+
+
 ## 0.2.2
 
 ### New Features
