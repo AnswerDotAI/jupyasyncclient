@@ -8,14 +8,13 @@ Docs: https://AnswerDotAI.github.io/jupyasyncclient/core.html.md"""
 __all__ = ['log', 'OUTPUT_MSGS', 'COMM_MSGS', 'KernelApi', 'JupyAsyncKernelClient', 'DeadKernelError', 'Run']
 
 # %% ../nbs/00_core.ipynb #a0271b3e
-import asyncio, json, logging, os, time, uuid, httpx, websockets
+import asyncio, logging, os, ssl, time, uuid, httpx, websockets
 from contextlib import suppress
 from queue import Empty
 from urllib.parse import urlencode, urlsplit, urlunsplit
-from jupywire.session import (Session, validate_string_dict, dumps, loads,
-    serialize_binary_message, deserialize_binary_message)
-from jupywire.ops import EvalOps, EvalException, try_eval
-from fastcore.basics import patch, patch_to, nested_idx
+from jupywire.session import Session, validate_string_dict, dumps, loads, serialize_binary_message, deserialize_binary_message
+from jupywire.ops import EvalOps
+from fastcore.basics import patch, nested_idx
 from fastcore.nbio import msg2out
 from fastcore.meta import use_kwargs_dict
 
@@ -35,16 +34,23 @@ def _join_url(base, path, ws=False, params=None):
 # %% ../nbs/00_core.ipynb #b5f06ba9
 class KernelApi:
     "Shared HTTP plumbing for the Jupyter kernels API."
-    def __init__(self, base_url, token=None, headers=None, timeout=30, http_client=None):
-        self.base_url,self.token,self._timeout = base_url.rstrip('/'),token or '',timeout
+    def __init__(self, base_url, token=None, headers=None, timeout=30, http_client=None, verify=True):
+        self.base_url,self.token,self._timeout,self.verify = base_url.rstrip('/'),token or '',timeout,verify
         self._headers = {**(headers or {})}
         if self.token and 'Authorization' not in self._headers: self._headers['Authorization'] = f'token {self.token}'
         self._http,self._own_http = http_client,http_client is None
 
     def _ensure_http(self):
         if self._http and not self._http.is_closed: return self._http
-        self._http,self._own_http = httpx.AsyncClient(headers=self._headers),True
+        self._http,self._own_http = httpx.AsyncClient(headers=self._headers, verify=self.verify),True
         return self._http
+
+    def _ws_ssl(self, url):
+        "An unverified ssl context when `verify=False` and `url` is wss, else None for the library default."
+        if self.verify or not url.startswith('wss'): return None
+        ctx = ssl.create_default_context()
+        ctx.check_hostname,ctx.verify_mode = False,ssl.CERT_NONE
+        return ctx
 
     async def _request(self, method, path, **kwargs):
         r = await self._ensure_http().request(method, _join_url(self.base_url, path), **kwargs)
@@ -66,8 +72,8 @@ class JupyAsyncKernelClient(EvalOps, KernelApi):
     "AsyncKernelClient-ish API over the kernels HTTP API plus its websocket channels."
     allow_stdin = True
     def __init__(self, base_url, kernel_id=None, token=None, session_id=None, username=None, headers=None, timeout=30, http_client=None,
-        reconnect=True, reconnect_ceiling=300.0):
-        super().__init__(base_url, token=token, headers=headers, timeout=timeout, http_client=http_client)
+        reconnect=True, reconnect_ceiling=300.0, verify=True):
+        super().__init__(base_url, token=token, headers=headers, timeout=timeout, http_client=http_client, verify=verify)
         self.kernel_id = kernel_id
         self.owned = False    # True only when `connect` created the kernel; honored by `__aexit__`
         self.session_id = session_id or uuid.uuid4().hex
@@ -75,7 +81,7 @@ class JupyAsyncKernelClient(EvalOps, KernelApi):
         self._ws,self._start_task,self._send_task,self._recv_task,self._close_task = [None]*5
         self.reconnect,self.reconnect_ceiling,self._unsent,self._closing = reconnect,reconnect_ceiling,None,False
         self._send_q = asyncio.Queue()
-        self._queues = {k: asyncio.Queue() for k in ("shell", "iopub", "stdin", "control")}
+        self._queues = {k: asyncio.Queue() for k in ("shell", "iopub", "stdin", "control", "cells")}
         self._reply_waiters = {k: {} for k in ("shell", "control")}
         self._stale_replies = {k: set() for k in ("shell", "control")}
         self._last_stdin_req = None
@@ -200,7 +206,7 @@ async def _start_ws(self: JupyAsyncKernelClient):
     params = {"session_id": self.session_id}
     if self.token: params["token"] = self.token
     ws_url = _join_url(self.base_url, self._kpath(suffix="/channels"), ws=True, params=params)
-    self._ws = await websockets.connect(ws_url, additional_headers=self._headers, ping_interval=30)
+    self._ws = await websockets.connect(ws_url, ssl=self._ws_ssl(ws_url), additional_headers=self._headers, ping_interval=30)
     self._send_task = asyncio.create_task(self._send_loop())
     self._recv_task = asyncio.create_task(self._recv_loop())
 
@@ -257,6 +263,8 @@ async def get_iopub_msg(self: JupyAsyncKernelClient, timeout=None): return await
 async def get_stdin_msg(self: JupyAsyncKernelClient, timeout=None): return await self._get_msg("stdin", timeout)
 @patch
 async def get_control_msg(self: JupyAsyncKernelClient, timeout=None): return await self._get_msg("control", timeout)
+@patch
+async def get_cells_msg(self: JupyAsyncKernelClient, timeout=None): return await self._get_msg("cells", timeout)
 
 # %% ../nbs/00_core.ipynb #f3407997
 @patch
@@ -464,9 +472,9 @@ def stop_channels(self: JupyAsyncKernelClient):
 
 # %% ../nbs/00_core.ipynb #1239b481
 @patch(cls_method=True)
-async def connect(cls:JupyAsyncKernelClient, base_url, kernel=None, token=None, timeout=60, **kw):
+async def connect(cls:JupyAsyncKernelClient, base_url, kernel=None, token=None, timeout=60, verify=True, **kw):
     "Construct + create a kernel (or attach to `kernel`) + open channels + wait ready; a created kernel is `owned`"
-    self = cls(base_url, kernel_id=kernel, token=token)
+    self = cls(base_url, kernel_id=kernel, token=token, verify=verify)
     if kernel is None:
         await self.start_kernel(**kw)
         self.owned = True

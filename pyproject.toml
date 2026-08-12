@@ -34,7 +34,7 @@ dev = [
   "ipykernel",
   "pytest-xdist",
   "pytest-timeout",
-  "jupygate>=0.0.2",
+  "rustygate>=0.1.1",
   "ipymini>=0.1.17",
   "ipyfuncs>=0.0.1",
 ]

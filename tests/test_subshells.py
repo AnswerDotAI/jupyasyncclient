@@ -84,7 +84,7 @@ class TestSubshells:
 
         # While subshell is busy, we should still be able to do completions on the main shell.
         t0 = time.perf_counter()
-        comp = await kc.complete("impor", reply=True, timeout=0.6)
+        comp = await kc.complete_request(code="impor", cursor_pos=5, reply=True, timeout=0.6)
         assert comp["header"]["msg_type"] == "complete_reply"
         assert time.perf_counter() - t0 < 0.6
 

@@ -8,8 +8,8 @@ __all__ = ["JupyAsyncKernelManager", "start_new_server_kernel"]
 class JupyAsyncKernelManager(KernelApi):
     "AsyncKernelManager-ish wrapper for one kernel's lifecycle."
     client_class = JupyAsyncKernelClient
-    def __init__(self, base_url, token=None, kernel_id=None, kernel_name="python3", username=None, headers=None, timeout=30, http_client=None):
-        super().__init__(base_url, token=token, headers=headers, timeout=timeout, http_client=http_client)
+    def __init__(self, base_url, token=None, kernel_id=None, kernel_name="python3", username=None, headers=None, timeout=30, http_client=None, verify=True):
+        super().__init__(base_url, token=token, headers=headers, timeout=timeout, http_client=http_client, verify=verify)
         self.kernel_id,self.kernel_name,self.username = kernel_id,kernel_name,username
 
     @property
@@ -42,7 +42,7 @@ class JupyAsyncKernelManager(KernelApi):
         if not kernel_id: raise RuntimeError("kernel_id required (call start_kernel first)")
         http = self._http if (self._http and not self._http.is_closed) else None
         return self.client_class(self.base_url, kernel_id=kernel_id, token=self.token, username=username or self.username,
-            headers=headers, timeout=timeout or self._timeout, http_client=http_client or http, session_id=session_id)
+            headers=headers, timeout=timeout or self._timeout, http_client=http_client or http, session_id=session_id, verify=self.verify)
 
     async def aclose(self):
         if self.kernel_id: await self.shutdown_kernel(now=True)
@@ -54,9 +54,9 @@ class JupyAsyncKernelManager(KernelApi):
 
     async def __aexit__(self, *exc): await self.aclose()
 
-async def start_new_server_kernel(base_url, token=None, kernel_name="python3", startup_timeout=60, **kwargs):
+async def start_new_server_kernel(base_url, token=None, kernel_name="python3", startup_timeout=60, verify=True, **kwargs):
     "Start a kernel and a ready client for it in one call; returns `(manager, client)`."
-    km = JupyAsyncKernelManager(base_url, token=token, kernel_name=kernel_name)
+    km = JupyAsyncKernelManager(base_url, token=token, kernel_name=kernel_name, verify=verify)
     await km.start_kernel(kernel_name, **kwargs)
     kc = km.client().start_channels()
     try: await kc.wait_for_ready(timeout=startup_timeout)

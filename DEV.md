@@ -1,6 +1,6 @@
 # Developer guide
 
-The client's design and behavior are documented where they are implemented: `nbs/00_core.ipynb` builds `JupyAsyncKernelClient` bottom-up with every public method demonstrated against a live jupygate. This file covers the project structure and the traps discovered while building it.
+The client's design and behavior are documented where they are implemented: `nbs/00_core.ipynb` builds `JupyAsyncKernelClient` bottom-up with every public method demonstrated against a live rustygate (the notebooks spawn the binary via `rustygate.tools.start_gateway`, provided by the `dev` extra). This file covers the project structure and the traps discovered while building it.
 
 ## Project structure
 
@@ -17,4 +17,4 @@ The client's design and behavior are documented where they are implemented: `nbs
 
 ## Tests
 
-`pytest -q` runs the suite against a real jupyter_server spawned per session (`tests/conftest.py`), deliberately not jupygate: the notebooks prove the client against jupygate, the suite proves it against the reference server, so both wire implementations are exercised (reconnect included: the suite test rides jupyter_server's own buffering and replay, the notebook demo rides jupygate's). pytest-timeout bounds everything. Style is fastai; run `chkstyle` on `manager.py` and `multimanager.py` (hand-written) - `core.py` style is fixed in the notebook.
+`pytest -q` runs the suite against a real jupyter_server spawned per session (`tests/conftest.py`), deliberately not rustygate: the notebooks prove the client against rustygate, the suite proves it against the reference server, so both wire implementations are exercised (reconnect included: the suite test rides jupyter_server's own buffering and replay, the notebook demo rides rustygate's). pytest-timeout bounds everything. Style is fastai; run `chkstyle` on `manager.py` and `multimanager.py` (hand-written) - `core.py` style is fixed in the notebook.

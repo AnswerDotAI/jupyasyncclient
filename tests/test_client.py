@@ -39,7 +39,7 @@ class TestJupyAsyncKernelClient:
     async def test_request_reply_roundtrip_and_shutdown(self, kc):
         rep = await kc.kernel_info(reply=True, timeout=TIMEOUT)
         assert rep["header"]["msg_type"]=="kernel_info_reply"
-        rep = await kc.complete("impor", reply=True, timeout=TIMEOUT)
+        rep = await kc.complete_request(code="impor", cursor_pos=5, reply=True, timeout=TIMEOUT)
         assert rep["header"]["msg_type"]=="complete_reply"
         rep = await kc.shutdown(reply=True, timeout=TIMEOUT)
         assert rep["header"]["msg_type"]=="shutdown_reply"

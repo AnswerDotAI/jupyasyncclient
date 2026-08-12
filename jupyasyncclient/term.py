@@ -1,6 +1,6 @@
 """A client for gateway-hosted terminals: REST lifecycle plus one websocket attachment
 
-[jupygate](https://github.com/AnswerDotAI/jupygate) hosts terminals as siblings of kernels (ptys managed by [ptymini](https://github.com/AnswerDotAI/ptymini), exposed at `/api/terminals`), so a client app can put a real shell next to its kernel — same machine, same container, same filesystem. `JupyAsyncTerminalClient` is that surface from the client side, shaped like `JupyAsyncKernelClient`: the same `KernelApi` HTTP plumbing for lifecycle, and one websocket for the byte stream. The ws contract is jupygate's: binary frames are pty bytes verbatim in both directions; text frames are JSON control — the server sends `setup` on accept (any replayed scrollback follows as binary), `gap` when this client fell behind the replay ring, and `eof` (with the exit code) when the pty dies; the client sends `set_size`.
+[rustygate](https://github.com/AnswerDotAI/rustygate) hosts terminals as siblings of kernels (ptys managed by [ptymini](https://github.com/AnswerDotAI/ptymini), exposed at `/api/terminals`), so a client app can put a real shell next to its kernel — same machine, same container, same filesystem. `JupyAsyncTerminalClient` is that surface from the client side, shaped like `JupyAsyncKernelClient`: the same `KernelApi` HTTP plumbing for lifecycle, and one websocket for the byte stream. The ws contract is jupygate's: binary frames are pty bytes verbatim in both directions; text frames are JSON control — the server sends `setup` on accept (any replayed scrollback follows as binary), `gap` when this client fell behind the replay ring, and `eof` (with the exit code) when the pty dies; the client sends `set_size`.
 
 Docs: https://AnswerDotAI.github.io/jupyasyncclient/term.html.md"""
 
@@ -18,8 +18,8 @@ from .core import KernelApi, _join_url
 # %% ../nbs/01_term.ipynb #53b412c9
 class JupyAsyncTerminalClient(KernelApi):
     "One gateway terminal: REST lifecycle over the shared `KernelApi` plumbing, plus one ws attachment."
-    def __init__(self, base_url, name=None, token=None, headers=None, timeout=30, http_client=None):
-        super().__init__(base_url, token=token, headers=headers, timeout=timeout, http_client=http_client)
+    def __init__(self, base_url, name=None, token=None, headers=None, timeout=30, http_client=None, verify=True):
+        super().__init__(base_url, token=token, headers=headers, timeout=timeout, http_client=http_client, verify=verify)
         self.name,self._ws = name,None
 
     def _tpath(self, name=''): return f'/api/terminals/{name}' if name else '/api/terminals'
@@ -27,7 +27,7 @@ class JupyAsyncTerminalClient(KernelApi):
     async def list_terminals(self): return await self.term_request('GET')
 
     async def start_terminal(self, **kw):
-        "Create a terminal (jupygate creation options pass through) and bind its name."
+        "Create a terminal (gateway creation options pass through) and bind its name."
         model = await self.term_request('POST', json=kw)
         self.name = model['name']
         return model
@@ -40,7 +40,7 @@ async def connect(self:JupyAsyncTerminalClient):
     "Open the terminal's ws channel and return the `setup` frame; replayed scrollback follows as binary."
     params = dict(token=self.token) if self.token else None
     url = _join_url(self.base_url, self._tpath(self.name)+'/channel', ws=True, params=params)
-    self._ws = await websockets.connect(url, max_size=None)
+    self._ws = await websockets.connect(url, ssl=self._ws_ssl(url), max_size=None)
     return json.loads(await self._ws.recv())
 
 @patch
