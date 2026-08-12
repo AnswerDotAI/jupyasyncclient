@@ -1,6 +1,6 @@
 """Files and cells over the gateway's contents and cells APIs
 
-[rustygate](https://github.com/AnswerDotAI/rustygate) serves two REST families beside the kernels API: a jupyter-inspired files API (`/api/contents`) and a cells API (`/api/cells`, per-cell operations on notebooks). This page builds their clients: `JupyAsyncFilesClient` addresses files and directories by path, `JupyAsyncCellsClient` binds to one notebook's cells, and `apply_ops` is the reference applier for the `cell_ops` change broadcasts that arrive on a kernel client's `cells` queue (`get_cells_msg`).
+[rustygate](https://github.com/AnswerDotAI/rustygate) serves two REST families beside the kernels API: a jupyter-inspired files API (`/api/contents`) and a cells API (`/api/cells`, per-cell operations on notebooks). This page builds their clients: `JupyAsyncFilesClient` addresses files and directories by path, `JupyAsyncCellsClient` binds to one notebook's cells, and `apply_ops` is the reference applier for the `cell_ops` change broadcasts that arrive on a kernel client's merged stream (`get_jmsg`, `channel` `'cells'`).
 
 Docs: https://AnswerDotAI.github.io/jupyasyncclient/files.html.md"""
 

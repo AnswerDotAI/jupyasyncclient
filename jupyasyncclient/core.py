@@ -72,7 +72,7 @@ class JupyAsyncKernelClient(EvalOps, KernelApi):
     "AsyncKernelClient-ish API over the kernels HTTP API plus its websocket channels."
     allow_stdin = True
     def __init__(self, base_url, kernel_id=None, token=None, session_id=None, username=None, headers=None, timeout=30, http_client=None,
-        reconnect=True, reconnect_ceiling=300.0, verify=True):
+        reconnect=True, reconnect_ceiling=300.0, verify=True, max_size=256*2**20):
         super().__init__(base_url, token=token, headers=headers, timeout=timeout, http_client=http_client, verify=verify)
         self.kernel_id = kernel_id
         self.owned = False    # True only when `connect` created the kernel; honored by `__aexit__`
@@ -80,8 +80,9 @@ class JupyAsyncKernelClient(EvalOps, KernelApi):
         self.session = Session(session=self.session_id, username=username or os.environ.get("USER") or "")
         self._ws,self._start_task,self._send_task,self._recv_task,self._close_task = [None]*5
         self.reconnect,self.reconnect_ceiling,self._unsent,self._closing = reconnect,reconnect_ceiling,None,False
+        self.max_size = max_size
         self._send_q = asyncio.Queue()
-        self._queues = {k: asyncio.Queue() for k in ("shell", "iopub", "stdin", "control", "cells")}
+        self._queues = {k: asyncio.Queue() for k in ("shell", "control", "jmsg")}
         self._reply_waiters = {k: {} for k in ("shell", "control")}
         self._stale_replies = {k: set() for k in ("shell", "control")}
         self._last_stdin_req = None
@@ -113,6 +114,13 @@ async def is_alive(self: JupyAsyncKernelClient):
     except Exception: return False
 
 
+# %% ../nbs/00_core.ipynb #60942186
+@patch
+async def kernel_for(self: KernelApi, path):
+    "The non-dead kernel model bound to notebook `path`, or None"
+    ms = await self._request('GET', '/api/kernels', params=dict(path=path))
+    return next((m for m in ms if m['execution_state'] != 'dead'), None)
+
 # %% ../nbs/00_core.ipynb #38c3312b
 @patch
 def _fail_pending(self: JupyAsyncKernelClient, exc, channel="shell", skip=None):
@@ -122,7 +130,7 @@ def _fail_pending(self: JupyAsyncKernelClient, exc, channel="shell", skip=None):
 
 @patch
 def _route_reply_or_queue(self: JupyAsyncKernelClient, msg):
-    channel = msg.pop("channel", None) or "shell"
+    channel = msg.get("channel") or "shell"
     msg.setdefault("msg_id", msg.get("header", {}).get("msg_id"))
     msg.setdefault("msg_type", msg.get("header", {}).get("msg_type"))
     msg.setdefault("buffers", [])
@@ -141,7 +149,7 @@ def _route_reply_or_queue(self: JupyAsyncKernelClient, msg):
         if parent_msg_id in self._stale_replies[channel]:
             self._stale_replies[channel].discard(parent_msg_id)
             return
-    q = self._queues.get(channel)
+    q = self._queues.get("jmsg" if channel in ("iopub", "stdin", "cells") else channel)
     if q: q.put_nowait(msg)
 
 # %% ../nbs/00_core.ipynb #0e8ce8d5
@@ -206,7 +214,7 @@ async def _start_ws(self: JupyAsyncKernelClient):
     params = {"session_id": self.session_id}
     if self.token: params["token"] = self.token
     ws_url = _join_url(self.base_url, self._kpath(suffix="/channels"), ws=True, params=params)
-    self._ws = await websockets.connect(ws_url, ssl=self._ws_ssl(ws_url), additional_headers=self._headers, ping_interval=30)
+    self._ws = await websockets.connect(ws_url, ssl=self._ws_ssl(ws_url), additional_headers=self._headers, ping_interval=30, max_size=self.max_size)
     self._send_task = asyncio.create_task(self._send_loop())
     self._recv_task = asyncio.create_task(self._recv_loop())
 
@@ -225,19 +233,20 @@ async def _send_and_await_reply(self: JupyAsyncKernelClient, msg, msg_id, timeou
 # %% ../nbs/00_core.ipynb #6606950e
 @patch
 def _exec_req(self: JupyAsyncKernelClient, name, content=None, channel="shell", metadata=None, reply=False, timeout=None, subshell_id=None,
-    parent=None, fail_pending=False):
+    parent=None, fail_pending=False, msg_id=None):
     msg = self.session.msg(name, content, metadata=metadata, parent=parent)
     if subshell_id: msg["header"]["subshell_id"] = subshell_id
-    msg_id = msg["header"]["msg_id"]
+    if msg_id: msg["header"]["msg_id"] = msg_id
+    else: msg_id = msg["header"]["msg_id"]
     if not reply: return self._queue_msg(msg, channel)
     return self._send_and_await_reply(msg, msg_id, timeout=timeout, channel=channel, fail_pending=fail_pending)
 
 def _gen_request(self, name):
     "Generated `*_request`/`*_reply` senders; other names raise, so typos fail instead of sending bogus messages. Assigned onto the class below (a module-level `__getattr__` would become a PEP 562 hook)."
     if name.startswith("_") or not name.endswith(("_request", "_reply")): raise AttributeError(name)
-    def _f(reply=False, timeout=None, channel="shell", metadata=None, subshell_id=None, parent=None, fail_pending=False, **kwargs):
+    def _f(reply=False, timeout=None, channel="shell", metadata=None, subshell_id=None, parent=None, fail_pending=False, msg_id=None, **kwargs):
         return self._exec_req(name, content=kwargs or None, reply=reply, timeout=timeout, channel=channel, metadata=metadata,
-            subshell_id=subshell_id, parent=parent, fail_pending=fail_pending)
+            subshell_id=subshell_id, parent=parent, fail_pending=fail_pending, msg_id=msg_id)
     return _f
 
 JupyAsyncKernelClient.__getattr__ = _gen_request
@@ -258,13 +267,21 @@ def channels_running(self: JupyAsyncKernelClient): return bool(self._ws and self
 @patch
 async def get_shell_msg(self: JupyAsyncKernelClient, timeout=None): return await self._get_msg("shell", timeout)
 @patch
-async def get_iopub_msg(self: JupyAsyncKernelClient, timeout=None): return await self._get_msg("iopub", timeout)
-@patch
-async def get_stdin_msg(self: JupyAsyncKernelClient, timeout=None): return await self._get_msg("stdin", timeout)
+async def get_jmsg(self: JupyAsyncKernelClient, timeout=None):
+    "Next message from the merged iopub/stdin/cells stream; each dict says which in `channel`"
+    return await self._get_msg("jmsg", timeout)
 @patch
 async def get_control_msg(self: JupyAsyncKernelClient, timeout=None): return await self._get_msg("control", timeout)
+
 @patch
-async def get_cells_msg(self: JupyAsyncKernelClient, timeout=None): return await self._get_msg("cells", timeout)
+async def jmsg_for(self: JupyAsyncKernelClient, *msg_types, timeout=None):
+    "Next merged-stream message whose `msg_type` is in `msg_types`, discarding the messages before it"
+    try:
+        async with asyncio.timeout(timeout):
+            while True:
+                m = await self.get_jmsg()
+                if m['msg_type'] in msg_types: return m
+    except TimeoutError as e: raise Empty from e
 
 # %% ../nbs/00_core.ipynb #f3407997
 @patch
@@ -272,7 +289,7 @@ async def wait_for_ready(self: JupyAsyncKernelClient, timeout=None):
     await self._ensure_started()
     await self.kernel_info_request(reply=True, timeout=timeout)
     while True:
-        try: await self.get_iopub_msg(timeout=0.05)
+        try: await self.get_jmsg(timeout=0.05)
         except Empty: return
 
 # %% ../nbs/00_core.ipynb #65a13919
@@ -283,13 +300,13 @@ _subskw = dict(**_replkw, subshell_id=None)
 @patch
 @use_kwargs_dict(**_subskw)
 def execute(self: JupyAsyncKernelClient, code, silent=False, store_history=True, user_expressions=None, allow_stdin=None, stop_on_error=True,
-    fail_pending=False, **kwargs):
+    fail_pending=False, msg_id=None, **kwargs):
     user_expressions = {} if user_expressions is None else user_expressions
     allow_stdin = self.allow_stdin if allow_stdin is None else allow_stdin
     if not isinstance(code, str): raise ValueError(f"code {code!r} must be a string")
     validate_string_dict(user_expressions)
     return self.execute_request(code=code, silent=silent, store_history=store_history, user_expressions=user_expressions,
-        allow_stdin=allow_stdin, stop_on_error=stop_on_error, fail_pending=fail_pending, **kwargs)
+        allow_stdin=allow_stdin, stop_on_error=stop_on_error, fail_pending=fail_pending, msg_id=msg_id, **kwargs)
 
 # %% ../nbs/00_core.ipynb #d75ce9da
 @patch
@@ -381,7 +398,7 @@ class Run:
         self.reply,self.status,self.execution_count = None,None,None
 
     async def __aiter__(self):
-        chans = dict(iopub=self.kc.get_iopub_msg, shell=self.kc.get_shell_msg, stdin=self.kc.get_stdin_msg)
+        chans = dict(jmsg=self.kc.get_jmsg, shell=self.kc.get_shell_msg)
         pend = {ch: asyncio.ensure_future(f(timeout=None)) for ch,f in chans.items()}
         done = idle = False
         try:
@@ -400,7 +417,7 @@ class Run:
                         if mt == 'execute_reply' and mine:
                             self.reply,self.status,self.execution_count = msg,c.get('status'),c.get('execution_count')
                             done = True
-                    elif ch == 'stdin':
+                    elif msg['channel'] == 'stdin':
                         if mt == 'input_request' and mine: self.kc.input(await self.on_stdin(c.get('prompt', ''), c.get('password', False)))
                     elif mt == 'status' and c.get('execution_state') == 'idle' and mine: idle = True
                     elif mt in OUTPUT_MSGS and mine: yield msg2out(msg)
