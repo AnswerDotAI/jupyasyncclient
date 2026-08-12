@@ -2,6 +2,14 @@
 
 <!-- do not remove -->
 
+## 0.2.2
+
+### New Features
+
+- Add files/cells client with cells channel and `apply_ops`, TLS verify option, and switch dev server and docs from jupygate to rustygate ([#6](https://github.com/AnswerDotAI/jupyasyncclient/issues/6))
+- Raise DeadKernelError instead of RuntimeError when reconnect probe finds the kernel is gone ([#5](https://github.com/AnswerDotAI/jupyasyncclient/issues/5))
+
+
 ## 0.2.1
 
 ### New Features
