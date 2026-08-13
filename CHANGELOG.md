@@ -2,6 +2,13 @@
 
 <!-- do not remove -->
 
+## 0.2.5
+
+### New Features
+
+- Flush pending sends on aclose, auto-close after `shutdown_kernel`, add `jmsg_flush` and `jmsg_for` pred, drop drain from `wait_for_ready` ([#9](https://github.com/AnswerDotAI/jupyasyncclient/issues/9))
+
+
 ## 0.2.4
 
 ### New Features
