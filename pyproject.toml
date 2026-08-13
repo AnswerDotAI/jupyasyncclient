@@ -12,7 +12,7 @@ authors = [{name = "Jeremy Howard"}]
 dynamic = ["version"]
 dependencies = [
   "jupywire>=0.0.1",
-  "httpx>=0.27",
+  "fasttransport>=0.0.1",
   "fastcore>=2.1.17",
   "websockets>=13",
 ]

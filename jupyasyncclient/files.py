@@ -10,7 +10,7 @@ Docs: https://AnswerDotAI.github.io/jupyasyncclient/files.html.md"""
 __all__ = ['HashMismatch', 'JupyAsyncFilesClient', 'JupyAsyncCellsClient', 'apply_ops']
 
 # %% ../nbs/02_files.ipynb #edf8880c
-import httpx
+import httpx2
 from base64 import b64encode, b64decode
 from fastcore.basics import patch, patch_to
 from .core import KernelApi
@@ -34,7 +34,7 @@ async def _creq(self:JupyAsyncFilesClient, method, path, expected_hash=None, par
     if not path.startswith('/'): path = f'/api/contents/{path}' if path else '/api/contents'
     p = dict(params or {}, session_id=self.session_id, expected_hash=expected_hash)
     try: return await self._request(method, path, params={k:v for k,v in p.items() if v is not None}, **kw)
-    except httpx.HTTPStatusError as e:
+    except httpx2.HTTPStatusError as e:
         if e.response.status_code==409: raise HashMismatch(e.response.json()['hash']) from e
         raise
 

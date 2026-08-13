@@ -58,18 +58,9 @@ class JupyAsyncMultiKernelManager(KernelApi):
 
     def get_kernel(self, kernel_id):
         if (km := self._kernels.get(kernel_id)): return km
-        self._ensure_http()
         km = self.kernel_manager_class(self.base_url, token=self.token, kernel_id=kernel_id, kernel_name=self.kernel_name,
-            username=self.username, timeout=self._timeout, http_client=self._http, verify=self.verify)
+            username=self.username, timeout=self._timeout, http_client=self.transport.client, verify=self.verify)
         self._kernels[kernel_id] = km
         return km
 
     def client(self, kernel_id, **kwargs): return self.get_kernel(kernel_id).client(**kwargs)
-
-    async def aclose(self): await self.aclose_http()
-
-    async def __aenter__(self):
-        self._ensure_http()
-        return self
-
-    async def __aexit__(self, *exc): await self.aclose()

@@ -8,7 +8,8 @@ Docs: https://AnswerDotAI.github.io/jupyasyncclient/core.html.md"""
 __all__ = ['log', 'OUTPUT_MSGS', 'COMM_MSGS', 'KernelApi', 'JupyAsyncKernelClient', 'DeadKernelError', 'Run']
 
 # %% ../nbs/00_core.ipynb #a0271b3e
-import asyncio, logging, os, ssl, time, uuid, httpx, websockets
+import asyncio, logging, os, ssl, time, uuid, httpx2, websockets
+from fasttransport.core import AsyncTransport
 from contextlib import suppress
 from queue import Empty
 from urllib.parse import urlencode, urlsplit, urlunsplit
@@ -38,12 +39,7 @@ class KernelApi:
         self.base_url,self.token,self._timeout,self.verify = base_url.rstrip('/'),token or '',timeout,verify
         self._headers = {**(headers or {})}
         if self.token and 'Authorization' not in self._headers: self._headers['Authorization'] = f'token {self.token}'
-        self._http,self._own_http = http_client,http_client is None
-
-    def _ensure_http(self):
-        if self._http and not self._http.is_closed: return self._http
-        self._http,self._own_http = httpx.AsyncClient(headers=self._headers, verify=self.verify),True
-        return self._http
+        self.transport = AsyncTransport(timeout=timeout, client=http_client, base_headers=self._headers, verify=verify)
 
     def _ws_ssl(self, url):
         "An unverified ssl context when `verify=False` and `url` is wss, else None for the library default."
@@ -53,19 +49,13 @@ class KernelApi:
         return ctx
 
     async def _request(self, method, path, **kwargs):
-        r = await self._ensure_http().request(method, _join_url(self.base_url, path), **kwargs)
-        r.raise_for_status()
-        if r.status_code==204: return True
-        ct = (r.headers.get('content-type') or '').split(';')[0]
-        return r.json() if ct=='application/json' else r.text
+        res = await self.transport.request(method, _join_url(self.base_url, path), **kwargs)
+        return True if res is None else res
 
     def _kpath(self, kernel_id='', suffix=''): return f"/api/kernels/{kernel_id}{suffix}" if kernel_id else '/api/kernels'
 
     async def kernel_request(self, method, kernel_id='', suffix='', **kwargs):
         return await self._request(method, self._kpath(kernel_id, suffix), **kwargs)
-
-    async def aclose_http(self):
-        if self._http and self._own_http and not self._http.is_closed: await self._http.aclose()
 
 # %% ../nbs/00_core.ipynb #7efec2a1
 class JupyAsyncKernelClient(EvalOps, KernelApi):
@@ -449,7 +439,7 @@ async def _reconnect(self: JupyAsyncKernelClient):
         except Exception as e:
             exc = None
             try: await self.kernel_request('GET')
-            except httpx.HTTPStatusError as he: exc = DeadKernelError(f'kernel {self.kernel_id} is gone: {he}')
+            except httpx2.HTTPStatusError as he: exc = DeadKernelError(f'kernel {self.kernel_id} is gone: {he}')
             except Exception: pass  # the server is unreachable too: keep trying until the ceiling
             if exc is None and time.monotonic() > deadline: exc = ConnectionError(f'gave up reconnecting after {self.reconnect_ceiling}s: {e}')
             if exc:
@@ -480,7 +470,6 @@ async def aclose(self: JupyAsyncKernelClient):
         d.clear()
     for s in self._stale_replies.values(): s.clear()
     self._ws = None
-    await self.aclose_http()
 
 @patch
 def stop_channels(self: JupyAsyncKernelClient):

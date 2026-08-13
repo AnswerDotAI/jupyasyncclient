@@ -40,19 +40,9 @@ class JupyAsyncKernelManager(KernelApi):
     def client(self, kernel_id=None, session_id=None, username=None, headers=None, timeout=None, http_client=None):
         kernel_id = kernel_id or self.kernel_id
         if not kernel_id: raise RuntimeError("kernel_id required (call start_kernel first)")
-        http = self._http if (self._http and not self._http.is_closed) else None
+        http = self.transport.client
         return self.client_class(self.base_url, kernel_id=kernel_id, token=self.token, username=username or self.username,
             headers=headers, timeout=timeout or self._timeout, http_client=http_client or http, session_id=session_id, verify=self.verify)
-
-    async def aclose(self):
-        if self.kernel_id: await self.shutdown_kernel(now=True)
-        await self.aclose_http()
-
-    async def __aenter__(self):
-        self._ensure_http()
-        return self
-
-    async def __aexit__(self, *exc): await self.aclose()
 
 async def start_new_server_kernel(base_url, token=None, kernel_name="python3", startup_timeout=60, verify=True, **kwargs):
     "Start a kernel and a ready client for it in one call; returns `(manager, client)`."
@@ -62,6 +52,6 @@ async def start_new_server_kernel(base_url, token=None, kernel_name="python3", s
     try: await kc.wait_for_ready(timeout=startup_timeout)
     except Exception:
         await kc.aclose()
-        await km.aclose()
+        await km.shutdown_kernel(now=True)
         raise
     return km,kc

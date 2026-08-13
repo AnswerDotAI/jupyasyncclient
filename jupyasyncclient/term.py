@@ -61,4 +61,3 @@ async def aclose(self:JupyAsyncTerminalClient):
     if self._ws is not None:
         with suppress(Exception): await self._ws.close()
         self._ws = None
-    await self.aclose_http()
