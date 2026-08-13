@@ -83,6 +83,32 @@ class JupyAsyncKernelClient(EvalOps, KernelApi):
         if not self.kernel_id: return None
         return await super().kernel_request(method, self.kernel_id, suffix, **kwargs)
 
+# %% ../nbs/00_core.ipynb #8dccd345
+@patch
+async def aclose(self: JupyAsyncKernelClient):
+    self._closing = True
+    if self._send_task and not self._send_task.done():   # the None sentinel ends `_send_loop` once the queue has drained
+        self._send_q.put_nowait(None)
+        with suppress(Exception):
+            async with asyncio.timeout(2): await self._send_task
+    for t in (self._start_task, self._send_task, self._recv_task):
+        if t and not t.done(): t.cancel()
+    if self._ws and self._ws.close_code is None: await self._ws.close()
+    for t in (self._start_task, self._send_task, self._recv_task):
+        if t:
+            with suppress(asyncio.CancelledError, Exception): await t
+    for d in self._reply_waiters.values():
+        for fut, _ in d.values():
+            if not fut.done(): fut.cancel()
+        d.clear()
+    for s in self._stale_replies.values(): s.clear()
+    self._ws = None
+
+@patch
+def stop_channels(self: JupyAsyncKernelClient):
+    if self._close_task and not self._close_task.done(): return
+    self._close_task = asyncio.create_task(self.aclose())
+
 # %% ../nbs/00_core.ipynb #1263d477
 @patch
 async def start_kernel(self:JupyAsyncKernelClient, kernel_name="python3", **kwargs):
@@ -92,7 +118,10 @@ async def start_kernel(self:JupyAsyncKernelClient, kernel_name="python3", **kwar
 
 # %% ../nbs/00_core.ipynb #bc577f39
 @patch
-async def shutdown_kernel(self: JupyAsyncKernelClient): return await self.kernel_request("DELETE")
+async def shutdown_kernel(self: JupyAsyncKernelClient):
+    "Delete the kernel, then close this client: with the kernel gone the connection has nothing left to serve"
+    try: return await self.kernel_request("DELETE")
+    finally: await self.aclose()
 @patch
 async def interrupt_kernel(self: JupyAsyncKernelClient): return await self.kernel_request("POST", "/interrupt")
 @patch
@@ -264,23 +293,28 @@ async def get_jmsg(self: JupyAsyncKernelClient, timeout=None):
 async def get_control_msg(self: JupyAsyncKernelClient, timeout=None): return await self._get_msg("control", timeout)
 
 @patch
-async def jmsg_for(self: JupyAsyncKernelClient, *msg_types, timeout=None):
-    "Next merged-stream message whose `msg_type` is in `msg_types`, discarding the messages before it"
+async def jmsg_for(self: JupyAsyncKernelClient, *msg_types, pred=None, timeout=None):
+    "Next merged-stream message whose `msg_type` is in `msg_types` (and satisfies `pred`, if given), discarding the messages before it"
     try:
         async with asyncio.timeout(timeout):
             while True:
                 m = await self.get_jmsg()
-                if m['msg_type'] in msg_types: return m
+                if m['msg_type'] in msg_types and (pred is None or pred(m)): return m
     except TimeoutError as e: raise Empty from e
+
+# %% ../nbs/00_core.ipynb #45e8b6c3
+@patch
+async def jmsg_flush(self:JupyAsyncKernelClient, timeout=0.2):
+    "Discard queued merged-stream messages until none arrives for `timeout` seconds"
+    while True:
+        try: await self.get_jmsg(timeout=timeout)
+        except Empty: return
 
 # %% ../nbs/00_core.ipynb #f3407997
 @patch
 async def wait_for_ready(self: JupyAsyncKernelClient, timeout=None):
     await self._ensure_started()
     await self.kernel_info_request(reply=True, timeout=timeout)
-    while True:
-        try: await self.get_jmsg(timeout=0.05)
-        except Empty: return
 
 # %% ../nbs/00_core.ipynb #65a13919
 _replkw = dict(reply=False, timeout=None)
@@ -454,28 +488,6 @@ async def _reconnect(self: JupyAsyncKernelClient):
 def shutdown(self: JupyAsyncKernelClient, restart=False, **kwargs):
     return self.shutdown_request(restart=restart, channel="control", **kwargs)
 
-# %% ../nbs/00_core.ipynb #8dccd345
-@patch
-async def aclose(self: JupyAsyncKernelClient):
-    self._closing = True
-    for t in (self._start_task, self._send_task, self._recv_task):
-        if t and not t.done(): t.cancel()
-    if self._ws and self._ws.close_code is None: await self._ws.close()
-    for t in (self._start_task, self._send_task, self._recv_task):
-        if t:
-            with suppress(asyncio.CancelledError, Exception): await t
-    for d in self._reply_waiters.values():
-        for fut, _ in d.values():
-            if not fut.done(): fut.cancel()
-        d.clear()
-    for s in self._stale_replies.values(): s.clear()
-    self._ws = None
-
-@patch
-def stop_channels(self: JupyAsyncKernelClient):
-    if self._close_task and not self._close_task.done(): return
-    self._close_task = asyncio.create_task(self.aclose())
-
 # %% ../nbs/00_core.ipynb #1239b481
 @patch(cls_method=True)
 async def connect(cls:JupyAsyncKernelClient, base_url, kernel=None, token=None, timeout=60, verify=True, **kw):
@@ -495,4 +507,4 @@ async def __aenter__(self:JupyAsyncKernelClient): return self
 async def __aexit__(self:JupyAsyncKernelClient, *exc):
     if self.owned:
         with suppress(Exception): await self.shutdown_kernel()
-    await self.aclose()
+    else: await self.aclose()
