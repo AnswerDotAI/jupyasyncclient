@@ -2,6 +2,13 @@
 
 <!-- do not remove -->
 
+## 0.2.6
+
+### New Features
+
+- Add JupyAsyncFilesClient.edit, drop conditional apply, make `apply_ops` bend like the server, and coerce Path args to str ([#10](https://github.com/AnswerDotAI/jupyasyncclient/issues/10))
+
+
 ## 0.2.5
 
 ### New Features
