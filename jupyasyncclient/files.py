@@ -10,7 +10,7 @@ Docs: https://AnswerDotAI.github.io/jupyasyncclient/files.html.md"""
 __all__ = ['HashMismatch', 'JupyAsyncFilesClient', 'JupyAsyncCellsClient', 'apply_ops']
 
 # %% ../nbs/02_files.ipynb #edf8880c
-import httpx2
+import httpx2, json
 from base64 import b64encode, b64decode
 from fastcore.basics import patch, patch_to
 from .core import KernelApi
@@ -35,7 +35,7 @@ async def _creq(self:JupyAsyncFilesClient, method, path, expected_hash=None, par
     p = dict(params or {}, session_id=self.session_id, expected_hash=expected_hash)
     try: return await self._request(method, path, params={k:v for k,v in p.items() if v is not None}, **kw)
     except httpx2.HTTPStatusError as e:
-        if e.response.status_code==409: raise HashMismatch(e.response.json()['hash']) from e
+        if e.response.status_code==409 and 'hash' in (body:=e.response.json()): raise HashMismatch(body['hash']) from e
         raise
 
 @patch
@@ -100,12 +100,24 @@ async def delete(self:JupyAsyncFilesClient, path, expected_hash=None):
     return await self._creq('DELETE', path, expected_hash=expected_hash)
 
 
+# %% ../nbs/02_files.ipynb #09ace5bf
+@patch
+async def edit(self:JupyAsyncFilesClient, path, f, tries=3):
+    "Read the JSON file at `path`, apply `f` to the parsed object, and write it back conditionally, retrying a lost race"
+    for _ in range(tries):
+        m = await self.get(path, fields='content,hash')
+        o = json.loads(m['content'])
+        f(o)
+        try: return await self.put(path, expected_hash=m['hash'], content=json.dumps(o, sort_keys=True, indent=1), format='text')
+        except HashMismatch: pass
+    raise RuntimeError(f'edit kept losing races for {path}')
+
 # %% ../nbs/02_files.ipynb #58b30b6d
 class JupyAsyncCellsClient(JupyAsyncFilesClient):
     "One notebook's cells over the gateway's cells API."
     def __init__(self, base_url, path, token=None, session_id=None, headers=None, timeout=30, http_client=None, verify=True):
         super().__init__(base_url, token=token, session_id=session_id, headers=headers, timeout=timeout, http_client=http_client, verify=verify)
-        self.path,self.hash = path,None
+        self.path,self.hash = str(path),None
 
     def __getitem__(self, ids): return self._lookup(ids)
 
@@ -129,9 +141,9 @@ async def hashes(self:JupyAsyncCellsClient):
     return m['cells']
 
 @patch
-async def apply(self:JupyAsyncCellsClient, ops, conditional=False):
-    "Apply `ops` atomically, returning ids of added cells; `conditional=True` sends the cursor as `expected_hash`."
-    m = await self.post(self._npath(), expected_hash=self.hash if conditional else None, ops=ops)
+async def apply(self:JupyAsyncCellsClient, ops):
+    "Apply `ops` atomically, returning ids of added cells."
+    m = await self.post(self._npath(), ops=ops)
     self.hash = m['hash']
     return m['added_ids']
 
@@ -145,13 +157,24 @@ async def _lookup(self:JupyAsyncCellsClient, ids):
 
 # %% ../nbs/02_files.ipynb #c4eec70d
 def apply_ops(cells, ops):
-    "Apply a `cell_ops` list to `cells` in place, in order, returning it."
+    "Apply a `cell_ops` list to `cells` in place, in order, bending as the server does; returns `cells`"
     for o in ops:
         ids = [c['id'] for c in cells]
-        if o['op']=='add':
-            at = ids.index(o['after'])+1 if o.get('after') else ids.index(o['before']) if o.get('before') else len(cells)
-            cells.insert(at, o['cell'])
-        elif o['op']=='update': cells[ids.index(o['id'])].update({k:v for k,v in o.items() if k not in ('op','id')})
-        elif o['op']=='delete': del cells[ids.index(o['id'])]
-        else: raise ValueError(f"unhandled op: {o['op']}")
+        op = o['op']
+        if op=='update' and o['id'] in ids: cells[ids.index(o['id'])].update({k:v for k,v in o.items() if k not in ('op','id')})
+        elif op in ('add','update'):
+            c = dict(o['cell']) if op=='add' else {k:v for k,v in o.items() if k!='op'}
+            if c.get('id') in ids: cells[ids.index(c['id'])].update({k:v for k,v in c.items() if k!='id'})
+            else:
+                c.setdefault('cell_type', 'code')
+                c.setdefault('metadata', {})
+                if c['cell_type']=='code':
+                    c.setdefault('outputs', [])
+                    c.setdefault('execution_count', None)
+                anchor = o.get('after') or o.get('before')
+                at = ids.index(anchor) + bool(o.get('after')) if anchor in ids else len(cells)
+                cells.insert(at, c)
+        elif op=='delete':
+            if o['id'] in ids: del cells[ids.index(o['id'])]
+        else: raise ValueError(f"unhandled op: {op}")
     return cells

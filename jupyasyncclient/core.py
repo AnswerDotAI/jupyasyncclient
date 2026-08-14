@@ -137,7 +137,7 @@ async def is_alive(self: JupyAsyncKernelClient):
 @patch
 async def kernel_for(self: KernelApi, path):
     "The non-dead kernel model bound to notebook `path`, or None"
-    ms = await self._request('GET', '/api/kernels', params=dict(path=path))
+    ms = await self._request('GET', '/api/kernels', params=dict(path=str(path)))
     return next((m for m in ms if m['execution_state'] != 'dead'), None)
 
 # %% ../nbs/00_core.ipynb #38c3312b
