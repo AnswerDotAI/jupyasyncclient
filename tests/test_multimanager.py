@@ -32,4 +32,3 @@ class TestJupyAsyncMultiKernelManager:
                 try: await c.aclose()
                 except Exception: pass
             await mkm.shutdown_all(now=True)
-            await mkm.aclose()

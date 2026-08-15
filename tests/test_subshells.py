@@ -24,16 +24,9 @@ async def kc(jp_server):
 
 async def _wait_for_iopub_status(kc, parent_msg_id: str, state: str, timeout: float = TIMEOUT):
     "Wait for a status message with a specific parent_msg_id + execution_state."
-    deadline = time.monotonic() + timeout
-    while True:
-        t = deadline - time.monotonic()
-        if t <= 0: raise TimeoutError(f"no iopub status={state!r} for {parent_msg_id!r}")
-        try: msg = await kc.get_iopub_msg(timeout=t)
-        except Empty as e: raise TimeoutError(f"no iopub status={state!r} for {parent_msg_id!r}") from e
-        if msg.get("header", {}).get("msg_type") != "status": continue
-        if msg.get("parent_header", {}).get("msg_id") != parent_msg_id: continue
-        if msg.get("content", {}).get("execution_state") != state: continue
-        return msg
+    def _pred(m): return m.get("parent_header", {}).get("msg_id") == parent_msg_id and m.get("content", {}).get("execution_state") == state
+    try: return await kc.jmsg_for("status", pred=_pred, timeout=timeout)
+    except Empty as e: raise TimeoutError(f"no iopub status={state!r} for {parent_msg_id!r}") from e
 
 
 async def _wait_for_shell_reply(kc, parent_msg_id: str, msg_type: str, timeout: float = TIMEOUT):

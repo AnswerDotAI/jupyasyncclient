@@ -61,10 +61,11 @@ async def patch(self, path, /, expected_hash=None, **kwargs):
 
 # %% ../nbs/02_files.ipynb #a85d5ed9
 @patch
-async def write(self:JupyAsyncFilesClient, path, content, expected_hash=None):
-    "Write `content` (`str` as text, `bytes` as base64), returning the model with its new `hash`."
+async def write(self:JupyAsyncFilesClient, path, content, expected_hash=None, unique=False):
+    "Write `content` (`str` as text, `bytes` as base64), returning the model with its new `hash`; `unique` lands at a free `name_n.ext`."
     c,f = (b64encode(content).decode(),'base64') if isinstance(content, bytes) else (content,'text')
-    return await self.put(path, expected_hash=expected_hash, content=c, format=f)
+    params = dict(unique='true') if unique else None
+    return await self._creq('PUT', path, expected_hash=expected_hash, params=params, json=dict(content=c, format=f))
 
 @patch
 async def read(self:JupyAsyncFilesClient, path):
@@ -80,9 +81,10 @@ async def listing(self:JupyAsyncFilesClient, path='', fields=None):
 
 # %% ../nbs/02_files.ipynb #c55f2f20
 @patch
-async def mkdir(self:JupyAsyncFilesClient, path):
-    "Create directory `path`; parents are not created."
-    return await self.put(path, type='directory')
+async def mkdir(self:JupyAsyncFilesClient, path, parents=False):
+    "Create directory `path`; `parents` creates missing ancestors like `mkdir -p`."
+    params = dict(parents='true') if parents else None
+    return await self._creq('PUT', path, params=params, json=dict(type='directory'))
 
 @patch
 async def rename(self:JupyAsyncFilesClient, path, to):
@@ -90,9 +92,10 @@ async def rename(self:JupyAsyncFilesClient, path, to):
     return await self.patch(path, path=to)
 
 @patch
-async def copy(self:JupyAsyncFilesClient, src, to):
-    "Copy `src` to `to`, returning the new model."
-    return await self.post(to, copy_from=src)
+async def copy(self:JupyAsyncFilesClient, src, to, unique=False):
+    "Copy `src` to `to`, returning the new model; `unique` lands at a free `name_n.ext`."
+    params = dict(unique='true') if unique else None
+    return await self._creq('POST', to, params=params, json=dict(copy_from=src))
 
 @patch
 async def delete(self:JupyAsyncFilesClient, path, expected_hash=None):

@@ -239,10 +239,8 @@ async def _start_ws(self: JupyAsyncKernelClient):
 
 # %% ../nbs/00_core.ipynb #0c4eb750
 @patch
-async def _send_and_await_reply(self: JupyAsyncKernelClient, msg, msg_id, timeout=None, channel="shell", fail_pending=False):
-    fut = asyncio.get_running_loop().create_future()
-    self._reply_waiters[channel][msg_id] = (fut, fail_pending)
-    self._queue_msg(msg, channel)
+async def _await_reply(self: JupyAsyncKernelClient, fut, msg_id, timeout=None, channel="shell"):
+    "Await a reply future registered by `_exec_req`; a timeout or cancellation marks the reply stale, so its late arrival is dropped"
     try:
         async with asyncio.timeout(timeout): return await fut
     finally:
@@ -258,7 +256,10 @@ def _exec_req(self: JupyAsyncKernelClient, name, content=None, channel="shell", 
     if msg_id: msg["header"]["msg_id"] = msg_id
     else: msg_id = msg["header"]["msg_id"]
     if not reply: return self._queue_msg(msg, channel)
-    return self._send_and_await_reply(msg, msg_id, timeout=timeout, channel=channel, fail_pending=fail_pending)
+    fut = asyncio.get_running_loop().create_future()
+    self._reply_waiters[channel][msg_id] = (fut, fail_pending)
+    self._queue_msg(msg, channel)
+    return self._await_reply(fut, msg_id, timeout=timeout, channel=channel)
 
 def _gen_request(self, name):
     "Generated `*_request`/`*_reply` senders; other names raise, so typos fail instead of sending bogus messages. Assigned onto the class below (a module-level `__getattr__` would become a PEP 562 hook)."
@@ -349,6 +350,13 @@ def delete_subshell_request(self: JupyAsyncKernelClient, subshell_id: str, metad
 @patch
 @use_kwargs_dict(**_replkw)
 def delete_subshell(self: JupyAsyncKernelClient, subshell_id: str, **kwargs): return self.delete_subshell_request(subshell_id=subshell_id, **kwargs)
+
+# %% ../nbs/00_core.ipynb #76577cec
+@patch
+@use_kwargs_dict(**_replkw)
+def release(self: JupyAsyncKernelClient, msg_id: str, status: str = "ok", metadata=None, **kwargs):
+    "Complete a held execute (kernmini's `hold` metadata); `status='error'` makes the hold's reply an error, engaging the kernel's stop-on-error tail abort"
+    return self._exec_req("release_request", content={"msg_id": msg_id, "status": status}, channel="control", metadata=metadata, **kwargs)
 
 # %% ../nbs/00_core.ipynb #057d4d1a
 @patch

@@ -29,7 +29,7 @@ class TestJupyAsyncKernelClient:
 
     async def test_input_request(self, kc):
         task = asyncio.create_task(kc.execute("x = input()\nx", reply=True, timeout=TIMEOUT))
-        msg = await kc.get_stdin_msg(timeout=TIMEOUT)
+        msg = await kc.jmsg_for("input_request", timeout=TIMEOUT)
         assert msg["header"]["msg_type"]=="input_request"
         kc.input("test")
         reply = await task
@@ -59,9 +59,7 @@ class TestJupyAsyncKernelClient:
         assert r2["content"]["status"]=="ok"
 
     async def test_concurrent_replies_after_orphan_execute(self, kc):
-        while True:
-            try: await kc.get_iopub_msg(timeout=0.05)
-            except Empty: break
+        await kc.jmsg_flush()
         kc.execute("print('orphan')", reply=False)
         await asyncio.sleep(0.3)
         slow = kc.execute("import time; time.sleep(0.3)", reply=True, timeout=TIMEOUT)
@@ -80,15 +78,16 @@ class TestJupyAsyncKernelClient:
         assert all(rep["header"]["msg_type"]=="execute_reply" for rep in reps)
         assert len({rep["parent_header"]["msg_id"] for rep in reps})==2
 
-    async def test_execute_reply_cancelled_before_first_step_does_not_register_waiter(self):
+    async def test_execute_reply_sends_at_call_time(self):
+        "Construction registers the waiter and queues the frame, so wire order is call order, whatever happens to the await."
         kc = JupyAsyncKernelClient("http://127.0.0.1:1", kernel_id="k")
         coro = kc.execute("1", reply=True, timeout=0.2)
-        assert not kc._reply_waiters["shell"]
+        assert len(kc._reply_waiters["shell"]) == 1
+        assert not kc._send_q.empty()
         task = asyncio.create_task(coro)
         task.cancel()
         with pytest.raises(asyncio.CancelledError): await task
-        assert not kc._reply_waiters["shell"]
-        assert kc._send_q.empty()
+        assert len(kc._reply_waiters["shell"]) == 1  # an unawaited reply stays registered; the router or fail_pending resolves it
 
     async def test_timed_out_execute_reply_is_dropped_if_it_arrives_late(self):
         class _OneMsgWS:
@@ -139,6 +138,6 @@ class TestJupyAsyncKernelClient:
         kc.reconnect_ceiling = 10
         t = asyncio.create_task(kc.execute("import time; time.sleep(30)", reply=True, timeout=60))
         await asyncio.sleep(0.3)
-        await kc.shutdown_kernel()              # the kernel goes away for real...
-        kc._ws.transport.abort()                # ...and then the connection dies
+        await kc.kernel_request("DELETE")       # the kernel goes away for real, behind the connection's back...
+        kc._ws.transport.abort()                # ...and then the connection dies: the redial probe finds the kernel gone
         with pytest.raises(RuntimeError, match="gone"): await t

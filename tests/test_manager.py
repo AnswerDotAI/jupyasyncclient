@@ -12,4 +12,3 @@ class TestJupyAsyncKernelManager:
         finally:
             await kc.aclose()
             await km.shutdown_kernel(now=True)
-            await km.aclose()
