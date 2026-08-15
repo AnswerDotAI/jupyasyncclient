@@ -2,6 +2,13 @@
 
 <!-- do not remove -->
 
+## 0.2.7
+
+### New Features
+
+- Send requests at call time, add release() for held executes, unique/parents file options, and `jmsg_for`/`jmsg_flush` message helpers ([#11](https://github.com/AnswerDotAI/jupyasyncclient/issues/11))
+
+
 ## 0.2.6
 
 ### New Features
