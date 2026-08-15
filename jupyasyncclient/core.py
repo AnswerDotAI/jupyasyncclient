@@ -409,11 +409,9 @@ def kernel_info(self: JupyAsyncKernelClient, **kwargs): return self.kernel_info_
 
 # %% ../nbs/00_core.ipynb #905ece60
 @patch
-def reply(self:JupyAsyncKernelClient, code, user_expressions=None, timeout=None, priority=False, **kw):
+def reply(self:JupyAsyncKernelClient, code, user_expressions=None, timeout=None, **kw):
     "Sugar for `execute(reply=True)`: run `code` and await its `execute_reply`"
-    if priority: assert self.priority, 'no priority subshell configured'
-    return self.execute(code, user_expressions=user_expressions, reply=True, timeout=timeout,
-        subshell_id=self.priority if priority else None, **kw)
+    return self.execute(code, user_expressions=user_expressions, reply=True, timeout=timeout, **kw)
 
 
 # %% ../nbs/00_core.ipynb #12f13fc0
