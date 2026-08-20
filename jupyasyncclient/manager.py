@@ -15,26 +15,26 @@ class JupyAsyncKernelManager(KernelApi):
     @property
     def has_kernel(self): return bool(self.kernel_id)
 
-    async def kernel_request(self, method, suffix="", **kwargs):
+    def _kid(self):
         if not self.kernel_id: raise RuntimeError("kernel_id required")
-        return await super().kernel_request(method, self.kernel_id, suffix, **kwargs)
+        return self.kernel_id
 
     async def start_kernel(self, kernel_name=None, **kwargs):
-        model = await self._request("POST", self._kpath(), json={"name": kernel_name or self.kernel_name, **kwargs})
+        model = await self.api.kernels.create_kernel(name=kernel_name or self.kernel_name, **kwargs)
         self.kernel_id = model["id"]
         self.kernel_name = model.get("name", kernel_name or self.kernel_name)
         return model
 
     async def shutdown_kernel(self, now=False, restart=False):
-        try: await self.kernel_request("DELETE")
+        try: await self.api.kernels.delete_kernel(kid=self._kid())
         finally:
             if not restart: self.kernel_id = None
 
-    async def interrupt_kernel(self): return await self.kernel_request("POST", "/interrupt")
-    async def restart_kernel(self, **kw): return await self.kernel_request("POST", "/restart")
+    async def interrupt_kernel(self): return await self.api.kernels.interrupt(kid=self._kid())
+    async def restart_kernel(self, **kw): return await self.api.kernels.restart(kid=self._kid())
 
     async def is_alive(self):
-        try: return bool(await self.kernel_request("GET"))
+        try: return bool(await self.api.kernels.get_kernel(kid=self._kid()))
         except Exception: return False
 
     def client(self, kernel_id=None, session_id=None, username=None, headers=None, timeout=None, http_client=None):

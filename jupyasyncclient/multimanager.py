@@ -16,27 +16,27 @@ class JupyAsyncMultiKernelManager(KernelApi):
         self.kernel_name,self.username = kernel_name,username
         self._kernels,self._owned,self._keys = {},set(),{}
 
-    async def list_kernels(self): return await self.kernel_request("GET")
+    async def list_kernels(self): return await self.api.kernels.list_kernels()
     async def list_kernel_ids(self): return [k["id"] for k in await self.list_kernels()]
 
     async def start_kernel(self, kernel_name=None, **kwargs):
-        model = await self.kernel_request("POST", json={"name": kernel_name or self.kernel_name, **kwargs})
+        model = await self.api.kernels.create_kernel(name=kernel_name or self.kernel_name, **kwargs)
         self._owned.add(model["id"])
         return model["id"]
 
     async def shutdown_kernel(self, kernel_id, now=False, restart=False):
-        try: await self.kernel_request("DELETE", kernel_id)
+        try: await self.api.kernels.delete_kernel(kid=kernel_id)
         finally:
             self._owned.discard(kernel_id)
             self._kernels.pop(kernel_id, None)
             self._keys = {k:v for k,v in self._keys.items() if v != kernel_id}
 
-    async def interrupt_kernel(self, kernel_id): await self.kernel_request("POST", kernel_id, "/interrupt")
-    async def restart_kernel(self, kernel_id, **kw): return await self.kernel_request("POST", kernel_id, "/restart")
+    async def interrupt_kernel(self, kernel_id): await self.api.kernels.interrupt(kid=kernel_id)
+    async def restart_kernel(self, kernel_id, **kw): return await self.api.kernels.restart(kid=kernel_id)
 
     async def is_alive(self, kernel_id):
         try:
-            await self.kernel_request("GET", kernel_id)
+            await self.api.kernels.get_kernel(kid=kernel_id)
             return True
         except Exception: return False
 

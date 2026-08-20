@@ -138,6 +138,6 @@ class TestJupyAsyncKernelClient:
         kc.reconnect_ceiling = 10
         t = asyncio.create_task(kc.execute("import time; time.sleep(30)", reply=True, timeout=60))
         await asyncio.sleep(0.3)
-        await kc.kernel_request("DELETE")       # the kernel goes away for real, behind the connection's back...
+        await kc.api.kernels.delete_kernel(kid=kc.kernel_id)  # the kernel goes away for real, behind the connection's back...
         kc._ws.transport.abort()                # ...and then the connection dies: the redial probe finds the kernel gone
         with pytest.raises(RuntimeError, match="gone"): await t

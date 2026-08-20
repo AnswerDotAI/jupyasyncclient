@@ -10,9 +10,10 @@ Docs: https://AnswerDotAI.github.io/jupyasyncclient/files.html.md"""
 __all__ = ['HashMismatch', 'JupyAsyncFilesClient', 'JupyAsyncCellsClient', 'apply_ops']
 
 # %% ../nbs/02_files.ipynb #edf8880c
-import httpx2, json
+import json
 from base64 import b64encode, b64decode
 from fastcore.basics import patch, patch_to
+from fastspec.errors import APIError
 from .core import KernelApi
 
 # %% ../nbs/02_files.ipynb #89287e61
@@ -30,33 +31,34 @@ class JupyAsyncFilesClient(KernelApi):
 
 # %% ../nbs/02_files.ipynb #3e15be7b
 @patch
-async def _creq(self:JupyAsyncFilesClient, method, path, expected_hash=None, params=None, **kw):
-    if not path.startswith('/'): path = f'/api/contents/{path}' if path else '/api/contents'
-    p = dict(params or {}, session_id=self.session_id, expected_hash=expected_hash)
-    try: return await self._request(method, path, params={k:v for k,v in p.items() if v is not None}, **kw)
-    except httpx2.HTTPStatusError as e:
-        if e.response.status_code==409 and 'hash' in (body:=e.response.json()): raise HashMismatch(body['hash']) from e
+async def _op(self:JupyAsyncFilesClient, op, **kw):
+    "Call spec op `op` with `session_id` attached and None values dropped; a conditional-write 409 raises `HashMismatch`."
+    kw = {k:v for k,v in dict(kw, session_id=self.session_id).items() if v is not None}
+    try: return await op(**kw)
+    except APIError as e:
+        if e.status_code==409 and isinstance(e.raw, dict) and 'hash' in e.raw: raise HashMismatch(e.raw['hash']) from e
         raise
 
 @patch
 async def get(self:JupyAsyncFilesClient, path='', **kwargs):
     "The model at `path`; `kwargs` become query parameters, e.g. `fields`."
-    return await self._creq('GET', path, params=kwargs)
+    if not path: return await self._op(self.api.contents.get_root, **kwargs)
+    return await self._op(self.api.contents.get_path, path=path, **kwargs)
 
 @patch
 async def put(self:JupyAsyncFilesClient, path, expected_hash=None, **kwargs):
-    "PUT with `kwargs` as the JSON body."
-    return await self._creq('PUT', path, expected_hash=expected_hash, json=kwargs)
+    "PUT to the contents API; `kwargs` are its body and query fields."
+    return await self._op(self.api.contents.put_path, path=path, expected_hash=expected_hash, **kwargs)
 
 @patch
 async def post(self:JupyAsyncFilesClient, path, expected_hash=None, **kwargs):
-    "POST with `kwargs` as the JSON body."
-    return await self._creq('POST', path, expected_hash=expected_hash, json=kwargs)
+    "POST to the contents API; `kwargs` are its body and query fields."
+    return await self._op(self.api.contents.post_path, path=path, expected_hash=expected_hash, **kwargs)
 
 @patch_to(JupyAsyncFilesClient)
 async def patch(self, path, /, expected_hash=None, **kwargs):
     "PATCH with `kwargs` as the JSON body; `path` is positional-only, freeing the name for the body."
-    return await self._creq('PATCH', path, expected_hash=expected_hash, json=kwargs)
+    return await self._op(self.api.contents.patch_path, path=path, expected_hash=expected_hash, body_=kwargs)
 
 
 # %% ../nbs/02_files.ipynb #a85d5ed9
@@ -64,8 +66,7 @@ async def patch(self, path, /, expected_hash=None, **kwargs):
 async def write(self:JupyAsyncFilesClient, path, content, expected_hash=None, unique=False):
     "Write `content` (`str` as text, `bytes` as base64), returning the model with its new `hash`; `unique` lands at a free `name_n.ext`."
     c,f = (b64encode(content).decode(),'base64') if isinstance(content, bytes) else (content,'text')
-    params = dict(unique='true') if unique else None
-    return await self._creq('PUT', path, expected_hash=expected_hash, params=params, json=dict(content=c, format=f))
+    return await self.put(path, expected_hash=expected_hash, unique=unique or None, content=c, format=f)
 
 @patch
 async def read(self:JupyAsyncFilesClient, path):
@@ -83,8 +84,7 @@ async def listing(self:JupyAsyncFilesClient, path='', fields=None):
 @patch
 async def mkdir(self:JupyAsyncFilesClient, path, parents=False):
     "Create directory `path`; `parents` creates missing ancestors like `mkdir -p`."
-    params = dict(parents='true') if parents else None
-    return await self._creq('PUT', path, params=params, json=dict(type='directory'))
+    return await self.put(path, parents=parents or None, type='directory')
 
 @patch
 async def rename(self:JupyAsyncFilesClient, path, to):
@@ -94,13 +94,12 @@ async def rename(self:JupyAsyncFilesClient, path, to):
 @patch
 async def copy(self:JupyAsyncFilesClient, src, to, unique=False):
     "Copy `src` to `to`, returning the new model; `unique` lands at a free `name_n.ext`."
-    params = dict(unique='true') if unique else None
-    return await self._creq('POST', to, params=params, json=dict(copy_from=src))
+    return await self.post(to, unique=unique or None, copy_from=src)
 
 @patch
 async def delete(self:JupyAsyncFilesClient, path, expected_hash=None):
     "Delete a file or an empty directory."
-    return await self._creq('DELETE', path, expected_hash=expected_hash)
+    return await self._op(self.api.contents.delete_path, path=path, expected_hash=expected_hash)
 
 
 # %% ../nbs/02_files.ipynb #09ace5bf
@@ -126,27 +125,24 @@ class JupyAsyncCellsClient(JupyAsyncFilesClient):
 
 # %% ../nbs/02_files.ipynb #f408a806
 @patch
-def _npath(self:JupyAsyncCellsClient): return f'/api/cells/{self.path}'
-
-@patch
 async def cells(self:JupyAsyncCellsClient, ids=None):
     "The notebook's cells in document order, optionally filtered to `ids`."
     if ids is not None and not isinstance(ids, str): ids = ','.join(ids)
-    m = await self.get(self._npath(), ids=ids)
+    m = await self._op(self.api.cells.get_cells, path=self.path, ids=ids)
     self.hash = m['hash']
     return m['cells']
 
 @patch
 async def hashes(self:JupyAsyncCellsClient):
     "Per-cell `{'id','hash'}` rows: the cheap form for sync."
-    m = await self.get(self._npath(), fields='hashes')
+    m = await self._op(self.api.cells.get_cells, path=self.path, fields='hashes')
     self.hash = m['hash']
     return m['cells']
 
 @patch
 async def apply(self:JupyAsyncCellsClient, ops):
     "Apply `ops` atomically, returning ids of added cells."
-    m = await self.post(self._npath(), ops=ops)
+    m = await self._op(self.api.cells.post_cells, path=self.path, ops=ops)
     self.hash = m['hash']
     return m['added_ids']
 

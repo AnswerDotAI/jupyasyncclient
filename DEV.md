@@ -7,6 +7,7 @@ The client's design and behavior are documented where they are implemented: `nbs
 - `core.py` is generated from `nbs/00_core.ipynb` (never edit it; `nbdev-export` overwrites). It holds the wire codec, `KernelApi` (shared HTTP plumbing), and the client.
 - `manager.py` and `multimanager.py` are plain hand-written modules. They are thin HTTP wrappers over `KernelApi` with no narrative worth a notebook; putting them in one would only make giant cells. Their behavior is covered by the test suite and shown in `index.ipynb`.
 - The public API is re-exported from `__init__.py`; `_ws` (the old codec module) folded into `core` in 0.2.0, so `jupyasyncclient._ws` imports are gone while `manager`/`multimanager` paths survive.
+- `rg_spec.py` is rustygate's spec in fastspec's compact pre-parsed form (`SpecParser.save`), which `rg_spec()` loads into the ops on every client's `api`. Regenerate it from a gateway built at the wanted rev: `SpecParser.from_openapi(dict2obj(httpx.get(f'{url}/openapi.json').json())).save('jupyasyncclient/rg_spec.py')`, then run the notebooks. Bundling (rather than fetching at connect time) keeps construction offline and lets the same client talk to servers that serve no spec, such as jupyter_server.
 
 ## Traps worth knowing
 
