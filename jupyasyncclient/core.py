@@ -136,9 +136,14 @@ async def restart_kernel(self: JupyAsyncKernelClient):
     if self.kernel_id: return await self.api.kernels.restart(kid=self.kernel_id)
 
 @patch
+async def model(self: JupyAsyncKernelClient):
+    "What the gateway reports about this kernel (jupyter's `kernel model`): `execution_state`, `pid`, `path`, ..."
+    return await self.api.kernels.get_kernel(kid=self.kernel_id)
+
+@patch
 async def is_alive(self: JupyAsyncKernelClient):
     if not self.kernel_id: return False
-    try: return bool(await self.api.kernels.get_kernel(kid=self.kernel_id))
+    try: return bool(await self.model())
     except Exception: return False
 
 
@@ -487,7 +492,7 @@ async def _reconnect(self: JupyAsyncKernelClient):
             return
         except Exception as e:
             exc = None
-            try: await self.api.kernels.get_kernel(kid=self.kernel_id)
+            try: await self.model()
             except APIError as he:
                 if he.status_code: exc = DeadKernelError(f'kernel {self.kernel_id} is gone: {he.message}')
             except Exception: pass  # the server is unreachable too: keep trying until the ceiling
