@@ -19,7 +19,7 @@ from queue import Empty
 from urllib.parse import urlencode, urlsplit, urlunsplit
 from jupywire.session import Session, validate_string_dict, dumps, loads, serialize_binary_message, deserialize_binary_message
 from jupywire.ops import EvalOps
-from fastcore.basics import patch, nested_idx
+from fastcore.basics import patch
 from fastcore.xtras import dict2obj
 from fastcore.net import urlread
 from fastcore.nbio import msg2out
@@ -85,6 +85,7 @@ class JupyAsyncKernelClient(EvalOps, KernelApi):
         self._reply_waiters = {k: {} for k in ("shell", "control")}
         self._stale_replies = {k: set() for k in ("shell", "control")}
         self._last_stdin_req = None
+        self._run_queues = {}   # msg_id -> queue of every message parented to that `Run`'s execute
 
     def _kpath(self, kernel_id='', suffix=''): return super()._kpath(kernel_id or self.kernel_id, suffix)
 
@@ -177,6 +178,9 @@ def _route_reply_or_queue(self: JupyAsyncKernelClient, msg):
         if parent_msg_id in self._stale_replies[channel]:
             self._stale_replies[channel].discard(parent_msg_id)
             return
+    if (rq := self._run_queues.get(parent_msg_id)) is not None:
+        rq.put_nowait(msg)
+        return
     q = self._queues.get("jmsg" if channel in ("iopub", "stdin", "cells") else channel)
     if q: q.put_nowait(msg)
 
@@ -430,39 +434,30 @@ COMM_MSGS = ('comm_open', 'comm_msg', 'comm_close')
 class DeadKernelError(RuntimeError): pass
 
 class Run:
-    "One execution's typed output stream: parent-filtered iopub until reply+idle; single-use."
+    "One execution's typed output stream: the messages parented to its execute, routed to it by the client, until reply+idle; single-use."
     def __init__(self, kc, code, on_stdin=None, on_comm=None, **kw):
         self.kc,self.on_stdin,self.on_comm = kc,on_stdin,on_comm
         self.msg_id = kc.execute(code, allow_stdin=on_stdin is not None, **kw)
+        self.q = kc._run_queues[self.msg_id] = asyncio.Queue()
         self.reply,self.status,self.execution_count = None,None,None
 
     async def __aiter__(self):
-        chans = dict(jmsg=self.kc.get_jmsg, shell=self.kc.get_shell_msg)
-        pend = {ch: asyncio.ensure_future(f(timeout=None)) for ch,f in chans.items()}
         done = idle = False
         try:
             while not (done and idle):
-                ready,_ = await asyncio.wait(pend.values(), return_when=asyncio.FIRST_COMPLETED, timeout=1)
-                if not ready:
+                try: msg = await asyncio.wait_for(self.q.get(), 1)
+                except TimeoutError:
                     if not await self.kc.is_alive(): raise DeadKernelError('kernel died while executing')
                     continue
-                for t in ready:
-                    ch = next(k for k,v in pend.items() if v is t)
-                    msg = t.result()
-                    pend[ch] = asyncio.ensure_future(chans[ch](timeout=None))
-                    mt,c = msg['msg_type'],msg['content']
-                    mine = nested_idx(msg, 'parent_header', 'msg_id') == self.msg_id
-                    if ch == 'shell':
-                        if mt == 'execute_reply' and mine:
-                            self.reply,self.status,self.execution_count = msg,c.get('status'),c.get('execution_count')
-                            done = True
-                    elif msg['channel'] == 'stdin':
-                        if mt == 'input_request' and mine: self.kc.input(await self.on_stdin(c.get('prompt', ''), c.get('password', False)))
-                    elif mt == 'status' and c.get('execution_state') == 'idle' and mine: idle = True
-                    elif mt in OUTPUT_MSGS and mine: yield msg2out(msg)
-                    elif mt in COMM_MSGS and self.on_comm is not None: self.on_comm(mt, c)
-        finally:
-            for t in pend.values(): t.cancel()
+                mt,c = msg['msg_type'],msg['content']
+                if mt == 'execute_reply':
+                    self.reply,self.status,self.execution_count = msg,c.get('status'),c.get('execution_count')
+                    done = True
+                elif mt == 'input_request': self.kc.input(await self.on_stdin(c.get('prompt', ''), c.get('password', False)))
+                elif mt == 'status' and c.get('execution_state') == 'idle': idle = True
+                elif mt in OUTPUT_MSGS: yield msg2out(msg)
+                elif mt in COMM_MSGS and self.on_comm is not None: self.on_comm(mt, c)
+        finally: self.kc._run_queues.pop(self.msg_id, None)
 
     async def collect(self):
         "Drain the run, returning all outputs as a list."
