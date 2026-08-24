@@ -2,6 +2,17 @@
 
 <!-- do not remove -->
 
+## 0.2.8
+
+### New Features
+
+- Move message routing to jupywire RouterOps: awaitable `*_request` senders, collecting run(), JmsgQueues for pull-style consumers ([#17](https://github.com/AnswerDotAI/jupyasyncclient/issues/17))
+- Add JupyAsyncKernelClient.model to fetch the gateway kernel model, and use it in `is_alive` and reconnect checks ([#16](https://github.com/AnswerDotAI/jupyasyncclient/issues/16))
+- Add `build_spec` to regenerate the bundled rustygate spec from a running gateway openapi.json ([#14](https://github.com/AnswerDotAI/jupyasyncclient/issues/14))
+- Replace hand-rolled HTTP calls with spec-generated OpenAPI ops from bundled rustygate spec across kernel, terminal, and files clients ([#13](https://github.com/AnswerDotAI/jupyasyncclient/issues/13))
+- Remove priority param from reply() ([#12](https://github.com/AnswerDotAI/jupyasyncclient/issues/12))
+
+
 ## 0.2.7
 
 ### New Features
