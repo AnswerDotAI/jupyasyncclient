@@ -33,7 +33,6 @@ dev = [
   "pytest-asyncio>=0.23",
   "jupyter_server>=2",
   "ipykernel",
-  "pytest-xdist",
   "pytest-timeout",
   "rustygate>=0.1.5",
   "ipymini>=0.1.17",
@@ -45,7 +44,6 @@ include = ["jupyasyncclient"]
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
-addopts = "-n 3 --dist=loadfile"
 timeout = 120
 timeout_method = "thread"
 

@@ -7,7 +7,7 @@ jupyasyncclient runs code on Jupyter kernels hosted by any server speaking the s
 
 Three classes cover the usual shapes, mirroring jupyter_client where familiarity helps:
 
-- [`JupyAsyncKernelClient`](https://AnswerDotAI.github.io/jupyasyncclient/core.html#jupyasynckernelclient) - one kernel: lifecycle, channels, and messaging. `execute`, `complete`, `inspect`, `history`, `kernel_info`, `wait_for_ready`, and per-channel `get_*_msg` accessors work like their jupyter_client namesakes; any request can await its reply directly with `reply=True`; and every `*_request` message type in the protocol is callable by name, subshell requests included, so new protocol messages need no client release.
+- [`JupyAsyncKernelClient`](https://AnswerDotAI.github.io/jupyasyncclient/core.html#jupyasynckernelclient) - one kernel: lifecycle, channels, and messaging. `execute`, `complete`, `inspect`, `history`, `kernel_info`, and `wait_for_ready` work like their jupyter_client namesakes. `execute` sends fire-and-forget, `reply` awaits one `execute_reply`, and `run` collects every message one execute causes; broadcast traffic goes to an `on_jmsg` callback, with `JmsgQueues` as the pull adapter. Every `*_request` message type in the protocol is callable by name, returning an awaitable of its reply, subshell requests included, so new protocol messages need no client release.
 - `JupyAsyncKernelManager` - start/stop one kernel and mint clients for it.
 - `JupyAsyncMultiKernelManager` - a fleet, with keyed reuse: `ensure_kernel('some-key')` returns the live kernel registered under that key or starts a fresh one.
 
@@ -41,7 +41,8 @@ g
 
 ``` python
 km, kc = await start_new_server_kernel(g.url)
-rep = await kc.execute("print('hello'); 6*7", reply=True, timeout=30)
+qs = JmsgQueues(kc, queues=('jmsg',), merge=dict(iopub='jmsg', stdin='jmsg'))
+rep = await kc.reply("print('hello'); 6*7", timeout=30)
 rep['content']['status']
 ```
 
@@ -50,8 +51,7 @@ rep['content']['status']
 Outputs arrive on the iopub queue, like jupyter_client:
 
 ``` python
-m = await kc.get_iopub_msg(timeout=15)
-while m['msg_type'] != 'stream': m = await kc.get_iopub_msg(timeout=15)
+m = await qs.jmsg_for('stream', timeout=15)
 m['content']['text']
 ```
 
@@ -60,20 +60,20 @@ m['content']['text']
 `input()` in the kernel becomes an `input_request` on the stdin queue; answer it with `input`, which parents the reply properly:
 
 ``` python
-fut = asyncio.ensure_future(kc.execute("name = input('who? ')", reply=True, timeout=30))
-prompt = await kc.get_stdin_msg(timeout=15)
+fut = asyncio.ensure_future(kc.reply("name = input('who? ')", timeout=30))
+prompt = await qs.jmsg_for('input_request', timeout=15)
 kc.input('Jeremy')
 (await fut)['content']['status']
 ```
 
     'ok'
 
-Any protocol request type works by name, `reply=True` awaiting its reply - here JEP 91 subshells, no client support required beyond the message type:
+Any protocol request type works by name, awaited for its reply - here JEP 91 subshells, no client support required beyond the message type:
 
 ``` python
-sub = (await kc.create_subshell(reply=True, timeout=15))['content']['subshell_id']
-rep = await kc.execute('40+2', reply=True, timeout=30, subshell_id=sub)
-await kc.delete_subshell(sub, reply=True, timeout=15)
+sub = (await kc.create_subshell(timeout=15))['content']['subshell_id']
+rep = await kc.reply('40+2', timeout=30, subshell_id=sub)
+await kc.delete_subshell(sub, timeout=15)
 rep['content']['status']
 ```
 
@@ -92,9 +92,8 @@ k1 == k2
 
 ``` python
 await kc.aclose()
-await km.aclose()
+await km.shutdown_kernel()
 await mkm.shutdown_all()
-await mkm.aclose()
 ```
 
 Auth is a bearer token when the server requires one: pass `token=...` to any of the three classes and it is sent as an `Authorization` header on HTTP and a query param on the websocket.
