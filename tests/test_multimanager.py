@@ -16,7 +16,7 @@ class TestJupyAsyncMultiKernelManager:
             clients.append(kc)
             kc.start_channels()
             await kc.wait_for_ready(timeout=TIMEOUT)
-            rep = await kc.execute("2+2", reply=True, timeout=TIMEOUT)
+            rep = await kc.reply("2+2", timeout=TIMEOUT)
             assert rep["content"]["status"] == "ok"
 
             kidb = await mkm.ensure_kernel("b")
@@ -25,7 +25,7 @@ class TestJupyAsyncMultiKernelManager:
             clients.append(kcb)
             kcb.start_channels()
             await kcb.wait_for_ready(timeout=TIMEOUT)
-            rep2 = await kcb.kernel_info(reply=True, timeout=TIMEOUT)
+            rep2 = await kcb.kernel_info(timeout=TIMEOUT)
             assert rep2["header"]["msg_type"] == "kernel_info_reply"
         finally:
             for c in clients:

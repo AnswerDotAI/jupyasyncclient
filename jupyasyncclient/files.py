@@ -39,6 +39,8 @@ async def _op(self:JupyAsyncFilesClient, op, **kw):
         if e.status_code==409 and isinstance(e.raw, dict) and 'hash' in e.raw: raise HashMismatch(e.raw['hash']) from e
         raise
 
+
+# %% ../nbs/02_files.ipynb #5f99f9ef
 @patch
 async def get(self:JupyAsyncFilesClient, path='', **kwargs):
     "The model at `path`; `kwargs` become query parameters, e.g. `fields`."
@@ -55,11 +57,16 @@ async def post(self:JupyAsyncFilesClient, path, expected_hash=None, **kwargs):
     "POST to the contents API; `kwargs` are its body and query fields."
     return await self._op(self.api.contents.post_path, path=path, expected_hash=expected_hash, **kwargs)
 
+# %% ../nbs/02_files.ipynb #b42a6bd7
 @patch_to(JupyAsyncFilesClient)
 async def patch(self, path, /, expected_hash=None, **kwargs):
     "PATCH with `kwargs` as the JSON body; `path` is positional-only, freeing the name for the body."
     return await self._op(self.api.contents.patch_path, path=path, expected_hash=expected_hash, body_=kwargs)
 
+@patch
+async def delete(self:JupyAsyncFilesClient, path, expected_hash=None):
+    "Delete a file or an empty directory."
+    return await self._op(self.api.contents.delete_path, path=path, expected_hash=expected_hash)
 
 # %% ../nbs/02_files.ipynb #a85d5ed9
 @patch
@@ -96,11 +103,6 @@ async def copy(self:JupyAsyncFilesClient, src, to, unique=False):
     "Copy `src` to `to`, returning the new model; `unique` lands at a free `name_n.ext`."
     return await self.post(to, unique=unique or None, copy_from=src)
 
-@patch
-async def delete(self:JupyAsyncFilesClient, path, expected_hash=None):
-    "Delete a file or an empty directory."
-    return await self._op(self.api.contents.delete_path, path=path, expected_hash=expected_hash)
-
 
 # %% ../nbs/02_files.ipynb #09ace5bf
 @patch
@@ -119,19 +121,38 @@ class JupyAsyncCellsClient(JupyAsyncFilesClient):
     "One notebook's cells over the gateway's cells API."
     def __init__(self, base_url, path, token=None, session_id=None, headers=None, timeout=30, http_client=None, verify=True):
         super().__init__(base_url, token=token, session_id=session_id, headers=headers, timeout=timeout, http_client=http_client, verify=verify)
-        self.path,self.hash = str(path),None
+        self.path,self.hash,self.matched = str(path),None,None
 
     def __getitem__(self, ids): return self._lookup(ids)
 
 # %% ../nbs/02_files.ipynb #f408a806
+def _cs(v):
+    "A comma-separated str from a str, an int, an iterable, or None"
+    if v is None or isinstance(v, str): return v
+    return ','.join(map(str, v)) if hasattr(v, '__iter__') else str(v)
+
 @patch
-async def cells(self:JupyAsyncCellsClient, ids=None):
-    "The notebook's cells in document order, optionally filtered to `ids`."
-    if ids is not None and not isinstance(ids, str): ids = ','.join(ids)
-    m = await self._op(self.api.cells.get_cells, path=self.path, ids=ids)
+async def cells(self:JupyAsyncCellsClient,
+    ids=None, # Cell ids to keep: comma-separated str, or a list
+    idx=None, # Cell positions to keep: comma-separated str, or a list of ints, 0-based, negative from the end; unions with `ids`
+    q=None, # Keep only cells whose source matches this regex (multiline, smart-case)
+    cell_type=None, # Keep only cells of this type: 'code', 'markdown', or 'raw'
+    meta=None, # Keep only cells whose metadata contains this dict as a recursive subset; a None value means "key present"
+    meta_not=None, # Drop cells whose metadata contains this dict as a recursive subset
+    limit=None, # Keep at most this many cells after filtering
+    context=None, # Also return this many neighbours either side of each kept cell; `self.matched` then names the true matches
+    fields=None, # Comma-separated extras: 'hashes', 'meta', 'attachments'
+):
+    "The notebook's cells in document order, optionally selected and filtered (the gateway's cells GET stages)."
+    m = await self._op(self.api.cells.get_cells, path=self.path, ids=_cs(ids), idx=_cs(idx), q=q, cell_type=cell_type,
+        meta=None if meta is None else json.dumps(meta), meta_not=None if meta_not is None else json.dumps(meta_not),
+        limit=limit, context=context, fields=fields)
     self.hash = m['hash']
+    self.matched = m.get('matched')
     return m['cells']
 
+
+# %% ../nbs/02_files.ipynb #a55ffe0f
 @patch
 async def hashes(self:JupyAsyncCellsClient):
     "Per-cell `{'id','hash'}` rows: the cheap form for sync."
