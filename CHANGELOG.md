@@ -2,6 +2,14 @@
 
 <!-- do not remove -->
 
+## 0.2.9
+
+### New Features
+
+- Add OpenAPI-derived kwargs to kernel list/start methods via delegates ([#20](https://github.com/AnswerDotAI/jupyasyncclient/issues/20))
+- Add `on_stdin` callback to scope `input_request` handling to a single run ([#18](https://github.com/AnswerDotAI/jupyasyncclient/issues/18))
+
+
 ## 0.2.8
 
 ### New Features
