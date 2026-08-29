@@ -2,6 +2,13 @@
 
 <!-- do not remove -->
 
+## 0.2.10
+
+### New Features
+
+- Teach the streaming run() in the core notebook ([#21](https://github.com/AnswerDotAI/jupyasyncclient/pull/21)), thanks to [@jph00](https://github.com/jph00)
+
+
 ## 0.2.9
 
 ### New Features
