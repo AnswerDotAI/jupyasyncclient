@@ -2,7 +2,9 @@
 
 import asyncio
 
-from .core import KernelApi
+from fastcore.meta import delegates
+from fastspec.oapi import op_func
+from .core import KernelApi, rg_spec
 from .manager import JupyAsyncKernelManager
 
 __all__ = ["JupyAsyncMultiKernelManager"]
@@ -16,9 +18,11 @@ class JupyAsyncMultiKernelManager(KernelApi):
         self.kernel_name,self.username = kernel_name,username
         self._kernels,self._owned,self._keys = {},set(),{}
 
-    async def list_kernels(self): return await self.api.kernels.list_kernels()
+    @delegates(op_func(rg_spec(), 'list_kernels'))
+    async def list_kernels(self, **kwargs): return await self.api.kernels.list_kernels(**kwargs)
     async def list_kernel_ids(self): return [k["id"] for k in await self.list_kernels()]
 
+    @delegates(op_func(rg_spec(), 'create_kernel'), but=['name'])
     async def start_kernel(self, kernel_name=None, **kwargs):
         model = await self.api.kernels.create_kernel(name=kernel_name or self.kernel_name, **kwargs)
         self._owned.add(model["id"])
@@ -32,7 +36,7 @@ class JupyAsyncMultiKernelManager(KernelApi):
             self._keys = {k:v for k,v in self._keys.items() if v != kernel_id}
 
     async def interrupt_kernel(self, kernel_id): await self.api.kernels.interrupt(kid=kernel_id)
-    async def restart_kernel(self, kernel_id, **kw): return await self.api.kernels.restart(kid=kernel_id)
+    async def restart_kernel(self, kernel_id): return await self.api.kernels.restart(kid=kernel_id)
 
     async def is_alive(self, kernel_id):
         try:
