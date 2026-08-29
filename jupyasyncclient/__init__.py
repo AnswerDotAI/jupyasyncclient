@@ -5,7 +5,7 @@ Modules:
 - `jupyasyncclient.files`: Files and cells over the gateway's contents and cells APIs
 - `jupyasyncclient.term`: A client for gateway-hosted terminals: REST lifecycle plus one websocket attachment"""
 
-__version__ = "0.2.9"
+__version__ = "0.2.10"
 
 from jupywire.route import JmsgQueues
 from .core import JupyAsyncKernelClient, DeadKernelError, dumps, loads, serialize_binary_message, deserialize_binary_message
