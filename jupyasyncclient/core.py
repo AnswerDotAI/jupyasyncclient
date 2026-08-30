@@ -255,7 +255,8 @@ def execute(self: JupyAsyncKernelClient, code, silent=False, store_history=True,
 
 # %% ../nbs/00_core.ipynb #d75ce9da
 @patch
-def create_subshell(self: JupyAsyncKernelClient, timeout=None): return self.create_subshell_request(channel="control", timeout=timeout)
+def create_subshell(self: JupyAsyncKernelClient, subshell_id=None, timeout=None):
+    return self.create_subshell_request(subshell_id=subshell_id, channel="control", timeout=timeout)
 
 @patch
 def list_subshell(self: JupyAsyncKernelClient, timeout=None): return self.list_subshell_request(channel="control", timeout=timeout)
