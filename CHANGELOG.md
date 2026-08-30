@@ -2,6 +2,13 @@
 
 <!-- do not remove -->
 
+## 0.2.11
+
+### New Features
+
+- Support stable subshell ids in `create_subshell`, rename eval flags ([#22](https://github.com/AnswerDotAI/jupyasyncclient/issues/22))
+
+
 ## 0.2.10
 
 ### New Features
