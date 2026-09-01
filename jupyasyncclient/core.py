@@ -11,7 +11,7 @@ __all__ = ['log', 'rg_spec', 'build_spec', 'KernelApi', 'JupyAsyncKernelClient']
 import asyncio, functools, inspect, json, logging, os, ssl, time, uuid, websockets
 from fasttransport.core import AsyncTransport
 from fastspec.oapi import OpenAPIClient, SpecParser
-from fastspec.errors import APIError
+from fasttransport.errors import APIError
 from contextlib import suppress
 from urllib.parse import urlencode, urlsplit, urlunsplit
 from jupywire.session import Session, validate_string_dict, dumps, loads, serialize_binary_message, deserialize_binary_message

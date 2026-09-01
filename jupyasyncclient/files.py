@@ -13,7 +13,7 @@ __all__ = ['HashMismatch', 'JupyAsyncFilesClient', 'JupyAsyncCellsClient', 'appl
 import json
 from base64 import b64encode, b64decode
 from fastcore.basics import patch, patch_to
-from fastspec.errors import APIError
+from fasttransport.errors import APIError
 from .core import KernelApi
 
 # %% ../nbs/02_files.ipynb #89287e61
