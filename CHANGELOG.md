@@ -2,6 +2,13 @@
 
 <!-- do not remove -->
 
+## 0.2.12
+
+### New Features
+
+- Import APIError from fasttransport ([#23](https://github.com/AnswerDotAI/jupyasyncclient/pull/23)), thanks to [@jph00](https://github.com/jph00)
+
+
 ## 0.2.11
 
 ### New Features
