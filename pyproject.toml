@@ -34,7 +34,7 @@ dev = [
   "jupyter_server>=2",
   "ipykernel",
   "pytest-timeout",
-  "rustygate>=0.1.5",
+  "rustygate>=0.1.9",
   "ipymini>=0.1.17",
   "ipyfuncs>=0.0.1",
 ]

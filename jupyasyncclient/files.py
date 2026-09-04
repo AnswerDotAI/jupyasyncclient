@@ -95,7 +95,7 @@ async def mkdir(self:JupyAsyncFilesClient, path, parents=False):
 
 @patch
 async def rename(self:JupyAsyncFilesClient, path, to):
-    "Rename `path` to `to`, returning the new model."
+    "Rename `path` to `to`, returning the new model; an existing `to` raises `HashMismatch`, since a rename never overwrites."
     return await self.patch(path, path=to)
 
 @patch
@@ -103,6 +103,11 @@ async def copy(self:JupyAsyncFilesClient, src, to, unique=False):
     "Copy `src` to `to`, returning the new model; `unique` lands at a free `name_n.ext`."
     return await self.post(to, unique=unique or None, copy_from=src)
 
+# %% ../nbs/02_files.ipynb #ee81e54e
+@patch
+async def search(self:JupyAsyncFilesClient, path='', **kwargs):
+    "The `/api/search` result for directory `path`: `kwargs` are its query parameters (`q`, `up`, `glob`, ...), documented in rustygate's DEV.md"
+    return await self._op(self.api.search.search, path=path or None, **kwargs)
 
 # %% ../nbs/02_files.ipynb #09ace5bf
 @patch
