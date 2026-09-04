@@ -2,6 +2,13 @@
 
 <!-- do not remove -->
 
+## 0.2.13
+
+### New Features
+
+- search wrapper, list_kernels forwards its filters, and the regenerated spec ([#24](https://github.com/AnswerDotAI/jupyasyncclient/pull/24)), thanks to [@jph00](https://github.com/jph00)
+
+
 ## 0.2.12
 
 ### New Features
