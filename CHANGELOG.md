@@ -2,11 +2,18 @@
 
 <!-- do not remove -->
 
+## 0.2.14
+
+### New Features
+
+- Add fields query param to /api/search for ancestor-walk content ([#25](https://github.com/AnswerDotAI/jupyasyncclient/issues/25))
+
+
 ## 0.2.13
 
 ### New Features
 
-- search wrapper, list_kernels forwards its filters, and the regenerated spec ([#24](https://github.com/AnswerDotAI/jupyasyncclient/pull/24)), thanks to [@jph00](https://github.com/jph00)
+- search wrapper, `list_kernels` forwards its filters, and the regenerated spec ([#24](https://github.com/AnswerDotAI/jupyasyncclient/pull/24)), thanks to [@jph00](https://github.com/jph00)
 
 
 ## 0.2.12
