@@ -1,0 +1,1404 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.10.18">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+<meta name="description" content="An async Jupyter kernel client over HTTP and websockets">
+
+<title>core – jupyasyncclient</title>
+<style>
+/* Default styles provided by pandoc.
+** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
+*/
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: 1.5em;}
+div.column{flex: auto;}
+@media screen {
+div.columns{gap: min(4vw, 1.5em);}
+div.column{overflow-x: auto;}
+}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+</style>
+
+
+<script src="site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="site_libs/quarto-nav/headroom.min.js"></script>
+<script src="site_libs/clipboard/clipboard.min.js"></script>
+<script src="site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="site_libs/quarto-search/fuse.min.js"></script>
+<script src="site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="./">
+<script src="site_libs/quarto-html/quarto.js" type="module"></script>
+<script src="site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
+<script src="site_libs/quarto-html/popper.min.js"></script>
+<script src="site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="site_libs/quarto-html/anchor.min.js"></script>
+<link href="site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="site_libs/quarto-html/quarto-syntax-highlighting-64a204ab8560d761af7679ceaba22944.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="site_libs/bootstrap/bootstrap-5ff355f32169432f12e3b54c979a24ba.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<script id="quarto-search-options" type="application/json">{
+  "location": "navbar",
+  "copy-button": false,
+  "collapse-after": 3,
+  "panel-placement": "end",
+  "type": "overlay",
+  "limit": 50,
+  "keyboard-shortcut": [
+    "f",
+    "/",
+    "s"
+  ],
+  "show-item-context": false,
+  "language": {
+    "search-no-results-text": "No results",
+    "search-matching-documents-text": "matching documents",
+    "search-copy-link-title": "Copy link to search",
+    "search-hide-matches-text": "Hide additional matches",
+    "search-more-match-text": "more match in this document",
+    "search-more-matches-text": "more matches in this document",
+    "search-clear-button-title": "Clear",
+    "search-text-placeholder": "",
+    "search-detached-cancel-button-title": "Cancel",
+    "search-submit-button-title": "Submit",
+    "search-label": "Search"
+  }
+}</script>
+
+
+<link rel="stylesheet" href="styles.css">
+<meta property="og:title" content="core – jupyasyncclient">
+<meta property="og:description" content="An async Jupyter kernel client over HTTP and websockets">
+<meta property="og:site_name" content="jupyasyncclient">
+<meta name="twitter:title" content="core – jupyasyncclient">
+<meta name="twitter:description" content="An async Jupyter kernel client over HTTP and websockets">
+<meta name="twitter:card" content="summary">
+</head>
+
+<body class="nav-sidebar floating nav-fixed quarto-light">
+
+<div id="quarto-search-results"></div>
+  <header id="quarto-header" class="headroom fixed-top">
+    <nav class="navbar navbar-expand-lg " data-bs-theme="dark">
+      <div class="navbar-container container-fluid">
+      <div class="navbar-brand-container mx-auto">
+    <a class="navbar-brand" href="./index.html">
+    <span class="navbar-title">jupyasyncclient</span>
+    </a>
+  </div>
+        <div class="quarto-navbar-tools tools-end">
+</div>
+          <div id="quarto-search" class="" title="Search"></div>
+      </div> <!-- /container-fluid -->
+    </nav>
+  <nav class="quarto-secondary-nav">
+    <div class="container-fluid d-flex">
+      <button type="button" class="quarto-btn-toggle btn" data-bs-toggle="collapse" role="button" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
+        <i class="bi bi-layout-text-sidebar-reverse"></i>
+      </button>
+        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="./core.html">core</a></li></ol></nav>
+        <a class="flex-grow-1" role="navigation" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">      
+        </a>
+    </div>
+  </nav>
+</header>
+<!-- content -->
+<div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article page-navbar">
+<!-- sidebar -->
+  <nav id="quarto-sidebar" class="sidebar collapse collapse-horizontal quarto-sidebar-collapse-item sidebar-navigation floating overflow-auto">
+    <div class="sidebar-menu-container"> 
+    <ul class="list-unstyled mt-1">
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./index.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">jupyasyncclient</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./core.html" class="sidebar-item-text sidebar-link active">
+ <span class="menu-text">core</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./term.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">term</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./files.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">files</span></a>
+  </div>
+</li>
+    </ul>
+    </div>
+</nav>
+<div id="quarto-sidebar-glass" class="quarto-sidebar-collapse-item" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item"></div>
+<!-- margin-sidebar -->
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+        <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">On this page</h2>
+   
+  <ul>
+  <li><a href="#wire-codec" id="toc-wire-codec" class="nav-link active" data-scroll-target="#wire-codec">Wire codec</a></li>
+  <li><a href="#shared-http-plumbing" id="toc-shared-http-plumbing" class="nav-link" data-scroll-target="#shared-http-plumbing">Shared HTTP plumbing</a></li>
+  <li><a href="#the-client" id="toc-the-client" class="nav-link" data-scroll-target="#the-client">The client</a>
+  <ul class="collapse">
+  <li><a href="#how-it-works" id="toc-how-it-works" class="nav-link" data-scroll-target="#how-it-works">How it works</a></li>
+  <li><a href="#connecting" id="toc-connecting" class="nav-link" data-scroll-target="#connecting">Connecting</a></li>
+  <li><a href="#the-request-api" id="toc-the-request-api" class="nav-link" data-scroll-target="#the-request-api">The request API</a></li>
+  <li><a href="#calling-kernel-functions" id="toc-calling-kernel-functions" class="nav-link" data-scroll-target="#calling-kernel-functions">Calling kernel functions</a></li>
+  <li><a href="#streaming-an-execution-run" id="toc-streaming-an-execution-run" class="nav-link" data-scroll-target="#streaming-an-execution-run">Streaming an execution: <code>run</code></a></li>
+  </ul></li>
+  <li><a href="#protocol-details" id="toc-protocol-details" class="nav-link" data-scroll-target="#protocol-details">Protocol details</a>
+  <ul class="collapse">
+  <li><a href="#reconnecting" id="toc-reconnecting" class="nav-link" data-scroll-target="#reconnecting">Reconnecting</a></li>
+  <li><a href="#closing-down" id="toc-closing-down" class="nav-link" data-scroll-target="#closing-down">Closing down</a></li>
+  <li><a href="#the-packaged-startup" id="toc-the-packaged-startup" class="nav-link" data-scroll-target="#the-packaged-startup">The packaged startup</a></li>
+  <li><a href="#tls" id="toc-tls" class="nav-link" data-scroll-target="#tls">TLS</a></li>
+  </ul></li>
+  </ul>
+<div class="toc-actions"><ul><li><a href="https://github.com/AnswerDotAI/jupyasyncclient/issues/new" class="toc-action"><i class="bi bi-github"></i>Report an issue</a></li></ul></div><div class="quarto-alternate-formats"><h2>Other Formats</h2><ul><li><a href="core.html.md"><i class="bi bi-file-code"></i>Markdown</a></li></ul></div></nav>
+    </div>
+<!-- main -->
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title">core</h1>
+</div>
+
+<div>
+  <div class="description">
+    An async Jupyter kernel client over HTTP and websockets
+  </div>
+</div>
+
+
+<div class="quarto-title-meta">
+
+    
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<!-- WARNING: THIS FILE WAS AUTOGENERATED! DO NOT EDIT! -->
+<p>jupyasyncclient talks to any server exposing the standard Jupyter kernels API: <a href="https://github.com/AnswerDotAI/rustygate">rustygate</a>, jupygate, or jupyter_server itself. Kernel lifecycle goes over HTTP (<code>POST /api/kernels</code>, interrupt, restart, delete); messaging goes over one websocket carrying the legacy Jupyter protocol (message dicts plus a <code>channel</code> key). There is no zmq anywhere in this package, and sends are genuinely awaited - the zmq subtleties (sync-send edge consumption, slow-joiner subscriptions, identity contracts) all live server-side.</p>
+<p>The API mirrors jupyter_client’s <code>AsyncKernelClient</code> where that helps a reader coming from it (<code>execute</code>, <code>kernel_info</code>, <code>wait_for_ready</code>), with three verbs at the core: <code>execute</code> sends fire-and-forget and returns the msg_id, <code>reply</code> awaits one <code>execute_reply</code>, and <code>run</code> collects every message one execute causes, with request-scoped output and stdin hooks. Any <code>*_request</code> message type in the protocol is available as a generated method returning an awaitable of its reply. Traffic not owned by a reply or run goes to one <code>on_jmsg</code> callback, in true arrival order, with each dict naming its origin in <code>channel</code>; a run’s stdin request goes to its <code>on_stdin</code> hook instead, and stdin is disabled when that hook is absent. The wire is already one ordered stream, and jupyter_client’s per-channel queues only re-split what every consumer then re-merges. <code>JmsgQueues</code> is the pull adapter for consumers that read rather than accept calls; this page attaches one and reads the merged stream as <code>jmsg</code>.</p>
+<p>Throughout this page the live server is a jupygate running an <a href="https://github.com/AnswerDotAI/ipymini">ipymini</a> kernel; everything works identically against jupyter_server (the test suite runs against that).</p>
+<div id="c5a15025" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-09-06T07:05:55.688678+00:00&quot;,&quot;shell.execute_reply&quot;:&quot;2026-09-06T07:05:55.690891+00:00&quot;,&quot;total&quot;:0.0022161969999956455}}" data-execution_count="2">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> fastcore.test <span class="im">import</span> test_eq, test_fail, ExceptionExpected</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> fastcore.nbio <span class="im">import</span> msg2out</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> jupywire.route <span class="im">import</span> JmsgQueues, OUTPUT_MSGS, COMM_MSGS</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> jupywire.ops <span class="im">import</span> EvalError</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> rustygate.tools <span class="im">import</span> start_gateway</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<section id="wire-codec" class="level2">
+<h2 class="anchored" data-anchor-id="wire-codec">Wire codec</h2>
+<p>The legacy protocol’s two encodings: JSON text frames, and a binary framing (count, offset table, JSON, then the raw buffers) for messages that carry <code>buffers</code>. The <a href="https://AnswerDotAI.github.io/jupygate/core.html">jupygate docs</a> walk the byte layout; the codec (<code>dumps</code>/<code>loads</code>, <code>serialize_binary_message</code>/<code>deserialize_binary_message</code>) lives in <code>jupywire.session</code>, and here it just needs to round-trip, with inbound buffers as <code>memoryview</code>s, zero-copy off the frame.</p>
+<div id="e668286d" class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>ses <span class="op">=</span> Session(key<span class="op">=</span><span class="st">b'demo'</span>)</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>msg <span class="op">=</span> ses.msg(<span class="st">'comm_msg'</span>, <span class="bu">dict</span>(comm_id<span class="op">=</span><span class="st">'c'</span>, data<span class="op">=</span>{}))</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>msg[<span class="st">'channel'</span>] <span class="op">=</span> <span class="st">'iopub'</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>msg[<span class="st">'buffers'</span>] <span class="op">=</span> [<span class="st">b'raw'</span>]</span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>back <span class="op">=</span> deserialize_binary_message(serialize_binary_message(msg))</span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>test_eq(<span class="bu">bytes</span>(back[<span class="st">'buffers'</span>][<span class="dv">0</span>]), <span class="st">b'raw'</span>)</span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>test_eq(loads(dumps(<span class="bu">dict</span>(msg, buffers<span class="op">=</span>[])))[<span class="st">'content'</span>], msg[<span class="st">'content'</span>])</span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>back[<span class="st">'channel'</span>]</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-display">
+<pre><code>'iopub'</code></pre>
+</div>
+</div>
+</section>
+<section id="shared-http-plumbing" class="level2">
+<h2 class="anchored" data-anchor-id="shared-http-plumbing">Shared HTTP plumbing</h2>
+<p>The three public classes all speak the same HTTP surface, so it lives in one base: URL joining (including the http-to-ws scheme flip for the channels endpoint), a <a href="https://github.com/AnswerDotAI/fasttransport">fasttransport</a> <code>AsyncTransport</code> (a fresh client per request, or one you pass in), and token headers. The REST calls themselves are <a href="https://github.com/AnswerDotAI/fastspec">fastspec</a> ops, generated from rustygate’s spec, bundled with this package in fastspec’s compact pre-parsed form (<code>rg_spec.py</code>) and sharing the base’s transport, so <code>.api</code> on any client exposes the gateway’s whole surface with signatures and docs straight from the spec. The kernels subset of that spec is the standard Jupyter kernels API, which is why the same ops work against jupyter_server too.</p>
+<div id="042b4372" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-09-06T07:05:55.697925+00:00&quot;,&quot;shell.execute_reply&quot;:&quot;2026-09-06T07:05:56.081537+00:00&quot;,&quot;total&quot;:0.383617208000004}}" data-execution_count="6">
+<hr>
+<p><a href="https://github.com/AnswerDotAI/jupyasyncclient/blob/main/jupyasyncclient/core.py#L48" target="_blank" style="float:right; font-size:smaller">source</a></p>
+<section id="kernelapi" class="level3">
+<h3 class="anchored" data-anchor-id="kernelapi">KernelApi</h3>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb4"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> KernelApi(</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>    base_url, token:NoneType<span class="op">=</span><span class="va">None</span>, headers:NoneType<span class="op">=</span><span class="va">None</span>, timeout:<span class="bu">int</span><span class="op">=</span><span class="dv">30</span>, http_client:NoneType<span class="op">=</span><span class="va">None</span>,</span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>    verify:<span class="bu">bool</span><span class="op">=</span><span class="va">True</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>):</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p><em>Shared HTTP plumbing for the Jupyter kernels API: one transport, and the spec-generated ops on <code>api</code>.</em></p>
+</section>
+</div>
+<div id="1d8a8025" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-09-06T07:05:56.081694+00:00&quot;,&quot;shell.execute_reply&quot;:&quot;2026-09-06T07:05:56.085931+00:00&quot;,&quot;total&quot;:0.0042409080000140875}}" data-execution_count="7">
+<hr>
+<p><a href="https://github.com/AnswerDotAI/jupyasyncclient/blob/main/jupyasyncclient/core.py#L44" target="_blank" style="float:right; font-size:smaller">source</a></p>
+<section id="build_spec" class="level3">
+<h3 class="anchored" data-anchor-id="build_spec">build_spec</h3>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb5"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> build_spec(</span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>    nm:<span class="bu">str</span><span class="op">=</span><span class="st">'jupyasyncclient/rg_spec.py'</span>, url:<span class="bu">str</span><span class="op">=</span><span class="st">'http://localhost:8787'</span></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>):</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p><em>Regenerate the compact spec module <code>rg_spec.py</code> from a running rustygate’s <code>/openapi.json</code>.</em></p>
+</section>
+</div>
+<div id="694f73b9" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-09-06T07:05:56.086059+00:00&quot;,&quot;shell.execute_reply&quot;:&quot;2026-09-06T07:05:56.089779+00:00&quot;,&quot;total&quot;:0.003724255000008725}}" data-execution_count="8">
+<hr>
+<p><a href="https://github.com/AnswerDotAI/jupyasyncclient/blob/main/jupyasyncclient/core.py#L39" target="_blank" style="float:right; font-size:smaller">source</a></p>
+<section id="rg_spec" class="level3">
+<h3 class="anchored" data-anchor-id="rg_spec">rg_spec</h3>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb6"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> rg_spec():</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p><em>The bundled rustygate spec, loaded once per process from its compact <a href="https://AnswerDotAI.github.io/jupyasyncclient/core.html#rg_spec"><code>rg_spec</code></a> module.</em></p>
+</section>
+</div>
+</section>
+<section id="the-client" class="level2">
+<h2 class="anchored" data-anchor-id="the-client">The client</h2>
+<p><a href="https://AnswerDotAI.github.io/jupyasyncclient/core.html#jupyasynckernelclient"><code>JupyAsyncKernelClient</code></a> is one kernel’s worth of everything: the HTTP lifecycle calls for its kernel, the websocket connection, and the messaging API. The HTTP side comes first, since it can run before any websocket exists; then the private machinery that moves frames; then the public messaging surface, each method demonstrated as soon as it is defined.</p>
+<div id="0e758280" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-09-06T07:05:56.092650+00:00&quot;,&quot;shell.execute_reply&quot;:&quot;2026-09-06T07:05:56.097916+00:00&quot;,&quot;total&quot;:0.005272627000010743}}" data-execution_count="10">
+<hr>
+<p><a href="https://github.com/AnswerDotAI/jupyasyncclient/blob/main/jupyasyncclient/core.py#L67" target="_blank" style="float:right; font-size:smaller">source</a></p>
+<section id="jupyasynckernelclient" class="level3">
+<h3 class="anchored" data-anchor-id="jupyasynckernelclient">JupyAsyncKernelClient</h3>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb7"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> JupyAsyncKernelClient(</span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>    base_url, kernel_id:NoneType<span class="op">=</span><span class="va">None</span>, token:NoneType<span class="op">=</span><span class="va">None</span>, session_id:NoneType<span class="op">=</span><span class="va">None</span>, username:NoneType<span class="op">=</span><span class="va">None</span>,</span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>    headers:NoneType<span class="op">=</span><span class="va">None</span>, timeout:<span class="bu">int</span><span class="op">=</span><span class="dv">30</span>, http_client:NoneType<span class="op">=</span><span class="va">None</span>, reconnect:<span class="bu">bool</span><span class="op">=</span><span class="va">True</span>,</span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>    reconnect_ceiling:<span class="bu">float</span><span class="op">=</span><span class="fl">300.0</span>, verify:<span class="bu">bool</span><span class="op">=</span><span class="va">True</span>, max_size:<span class="bu">int</span><span class="op">=</span><span class="dv">268435456</span></span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a>):</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p><em>AsyncKernelClient-ish API over the kernels HTTP API plus its websocket channels.</em></p>
+</section>
+</div>
+<p><code>aclose</code> unwinds everything the client owns - loops, websocket, and pending futures; <code>stop_channels</code> is its fire-and-forget form for sync contexts.</p>
+<div id="8087524f" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-09-06T07:05:56.100289+00:00&quot;,&quot;shell.execute_reply&quot;:&quot;2026-09-06T07:05:56.103191+00:00&quot;,&quot;total&quot;:0.002904390999987072}}" data-execution_count="12">
+<hr>
+<p><a href="https://github.com/AnswerDotAI/jupyasyncclient/blob/main/jupyasyncclient/core.py#L103" target="_blank" style="float:right; font-size:smaller">source</a></p>
+<section id="jupyasynckernelclient.stop_channels" class="level3">
+<h3 class="anchored" data-anchor-id="jupyasynckernelclient.stop_channels">JupyAsyncKernelClient.stop_channels</h3>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb8"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> stop_channels():</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p><em>Call self as a function.</em></p>
+</section>
+</div>
+<div id="60cff334" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-09-06T07:05:56.103281+00:00&quot;,&quot;shell.execute_reply&quot;:&quot;2026-09-06T07:05:56.106513+00:00&quot;,&quot;total&quot;:0.0032339130000025307}}" data-execution_count="13">
+<hr>
+<p><a href="https://github.com/AnswerDotAI/jupyasyncclient/blob/main/jupyasyncclient/core.py#L87" target="_blank" style="float:right; font-size:smaller">source</a></p>
+<section id="jupyasynckernelclient.aclose" class="level3">
+<h3 class="anchored" data-anchor-id="jupyasynckernelclient.aclose">JupyAsyncKernelClient.aclose</h3>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb9"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="cf">async</span> <span class="kw">def</span> aclose():</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p><em>Call self as a function.</em></p>
+</section>
+</div>
+<div id="6e3a9d4a" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-09-06T07:05:56.107472+00:00&quot;,&quot;shell.execute_reply&quot;:&quot;2026-09-06T07:05:56.110240+00:00&quot;,&quot;total&quot;:0.002770058999999492}}" data-execution_count="15">
+<hr>
+<p><a href="https://github.com/AnswerDotAI/jupyasyncclient/blob/main/jupyasyncclient/core.py#L109" target="_blank" style="float:right; font-size:smaller">source</a></p>
+<section id="jupyasynckernelclient.start_kernel" class="level3">
+<h3 class="anchored" data-anchor-id="jupyasynckernelclient.start_kernel">JupyAsyncKernelClient.start_kernel</h3>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb10"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="cf">async</span> <span class="kw">def</span> start_kernel(</span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>    kernel_name:<span class="bu">str</span><span class="op">=</span><span class="st">'python3'</span>, <span class="op">**</span>kwargs</span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a>):</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p><em>Call self as a function.</em></p>
+</section>
+</div>
+<p><code>start_kernel</code> posts to <code>/api/kernels</code> and binds the returned id. A live server to try it on - the rustygate binary, spawned in the background - and the rest of the page’s client:</p>
+<div id="625d387b" class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb11"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>g <span class="op">=</span> start_gateway()</span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>base_url <span class="op">=</span> g.url</span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a>g</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-display">
+<pre><code>True</code></pre>
+</div>
+</div>
+<div id="eaffe46e" class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb13"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a>kc <span class="op">=</span> JupyAsyncKernelClient(base_url)</span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a>model <span class="op">=</span> <span class="cf">await</span> kc.start_kernel()</span>
+<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a>model</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-display">
+<pre><code>{'id': '33873429da3d4fa38f77460c794d0f33',
+ 'name': '',
+ 'execution_state': 'alive',
+ 'connections': 0}</code></pre>
+</div>
+</div>
+<p>The remaining HTTP lifecycle calls are one-liners over the kernels ops. <code>model</code> fetches what the gateway reports about this kernel — its <code>execution_state</code>, <code>pid</code>, bound <code>path</code>, and so on (“kernel model” is jupyter_server’s name for that dict). <code>is_alive</code> doubles as an existence check since the server 404s unknown kernel ids.</p>
+<div id="f331904d" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-09-06T07:05:56.111866+00:00&quot;,&quot;shell.execute_reply&quot;:&quot;2026-09-06T07:05:56.114678+00:00&quot;,&quot;total&quot;:0.002814100999984248}}" data-execution_count="17">
+<hr>
+<p><a href="https://github.com/AnswerDotAI/jupyasyncclient/blob/main/jupyasyncclient/core.py#L125" target="_blank" style="float:right; font-size:smaller">source</a></p>
+<section id="jupyasynckernelclient.restart_kernel" class="level3">
+<h3 class="anchored" data-anchor-id="jupyasynckernelclient.restart_kernel">JupyAsyncKernelClient.restart_kernel</h3>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb15"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a><span class="cf">async</span> <span class="kw">def</span> restart_kernel():</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p><em>Call self as a function.</em></p>
+</section>
+</div>
+<div id="75624d31" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-09-06T07:05:56.114769+00:00&quot;,&quot;shell.execute_reply&quot;:&quot;2026-09-06T07:05:56.117213+00:00&quot;,&quot;total&quot;:0.00244640599999002}}" data-execution_count="18">
+<hr>
+<p><a href="https://github.com/AnswerDotAI/jupyasyncclient/blob/main/jupyasyncclient/core.py#L122" target="_blank" style="float:right; font-size:smaller">source</a></p>
+<section id="jupyasynckernelclient.interrupt_kernel" class="level3">
+<h3 class="anchored" data-anchor-id="jupyasynckernelclient.interrupt_kernel">JupyAsyncKernelClient.interrupt_kernel</h3>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb16"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a><span class="cf">async</span> <span class="kw">def</span> interrupt_kernel():</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p><em>Call self as a function.</em></p>
+</section>
+</div>
+<div id="d44690c8" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-09-06T07:05:56.117302+00:00&quot;,&quot;shell.execute_reply&quot;:&quot;2026-09-06T07:05:56.120017+00:00&quot;,&quot;total&quot;:0.002717871000015748}}" data-execution_count="19">
+<hr>
+<p><a href="https://github.com/AnswerDotAI/jupyasyncclient/blob/main/jupyasyncclient/core.py#L116" target="_blank" style="float:right; font-size:smaller">source</a></p>
+<section id="jupyasynckernelclient.shutdown_kernel" class="level3">
+<h3 class="anchored" data-anchor-id="jupyasynckernelclient.shutdown_kernel">JupyAsyncKernelClient.shutdown_kernel</h3>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb17"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a><span class="cf">async</span> <span class="kw">def</span> shutdown_kernel():</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p><em>Delete the kernel, then close this client: with the kernel gone the connection has nothing left to serve</em></p>
+</section>
+</div>
+<p><code>model</code> and <code>is_alive</code> read what the gateway reports:</p>
+<div id="9ecfeecb" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-09-06T07:05:56.121176+00:00&quot;,&quot;shell.execute_reply&quot;:&quot;2026-09-06T07:05:56.123925+00:00&quot;,&quot;total&quot;:0.0027515350000157923}}" data-execution_count="21">
+<hr>
+<p><a href="https://github.com/AnswerDotAI/jupyasyncclient/blob/main/jupyasyncclient/core.py#L136" target="_blank" style="float:right; font-size:smaller">source</a></p>
+<section id="jupyasynckernelclient.is_alive" class="level3">
+<h3 class="anchored" data-anchor-id="jupyasynckernelclient.is_alive">JupyAsyncKernelClient.is_alive</h3>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb18"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a><span class="cf">async</span> <span class="kw">def</span> is_alive():</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p><em>Call self as a function.</em></p>
+</section>
+</div>
+<div id="89989f80" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-09-06T07:05:56.124016+00:00&quot;,&quot;shell.execute_reply&quot;:&quot;2026-09-06T07:05:56.126353+00:00&quot;,&quot;total&quot;:0.002339556999999104}}" data-execution_count="22">
+<hr>
+<p><a href="https://github.com/AnswerDotAI/jupyasyncclient/blob/main/jupyasyncclient/core.py#L131" target="_blank" style="float:right; font-size:smaller">source</a></p>
+<section id="jupyasynckernelclient.model" class="level3">
+<h3 class="anchored" data-anchor-id="jupyasynckernelclient.model">JupyAsyncKernelClient.model</h3>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb19"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a><span class="cf">async</span> <span class="kw">def</span> model():</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p><em>What the gateway reports about this kernel (jupyter’s <code>kernel model</code>): <code>execution_state</code>, <code>pid</code>, <code>path</code>, …</em></p>
+</section>
+</div>
+<div id="71c3feca" class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb20"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a>m <span class="op">=</span> <span class="cf">await</span> kc.model()</span>
+<span id="cb20-2"><a href="#cb20-2" aria-hidden="true" tabindex="-1"></a>test_eq((m[<span class="st">'id'</span>], <span class="cf">await</span> kc.is_alive()), (kc.kernel_id, <span class="va">True</span>))</span>
+<span id="cb20-3"><a href="#cb20-3" aria-hidden="true" tabindex="-1"></a>none_kc <span class="op">=</span> JupyAsyncKernelClient(base_url)</span>
+<span id="cb20-4"><a href="#cb20-4" aria-hidden="true" tabindex="-1"></a>test_eq(<span class="cf">await</span> none_kc.is_alive(), <span class="va">False</span>)</span>
+<span id="cb20-5"><a href="#cb20-5" aria-hidden="true" tabindex="-1"></a>m</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<p><code>api</code> exposes the gateway’s whole surface as ops generated from the bundled rustygate OpenAPI spec: everything the wrapper methods above use, plus the endpoints that have no wrapper, such as search and exec. Displaying an op shows its signature and parameter docs, straight from the spec:</p>
+<div id="6384fa75" class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb21"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a>test_eq((<span class="cf">await</span> kc.api.kernels.get_kernel(kid<span class="op">=</span>kc.kernel_id))[<span class="st">'id'</span>], kc.kernel_id)</span>
+<span id="cb21-2"><a href="#cb21-2" aria-hidden="true" tabindex="-1"></a>kc.api.kernels.restart</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<div id="1fe04762" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-09-06T07:05:56.129049+00:00&quot;,&quot;shell.execute_reply&quot;:&quot;2026-09-06T07:05:56.131686+00:00&quot;,&quot;total&quot;:0.0026387540000030185}}" data-execution_count="24">
+<hr>
+<p><a href="https://github.com/AnswerDotAI/jupyasyncclient/blob/main/jupyasyncclient/core.py#L143" target="_blank" style="float:right; font-size:smaller">source</a></p>
+<section id="kernelapi.kernel_for" class="level3">
+<h3 class="anchored" data-anchor-id="kernelapi.kernel_for">KernelApi.kernel_for</h3>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb22"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb22-1"><a href="#cb22-1" aria-hidden="true" tabindex="-1"></a><span class="cf">async</span> <span class="kw">def</span> kernel_for(</span>
+<span id="cb22-2"><a href="#cb22-2" aria-hidden="true" tabindex="-1"></a>    path</span>
+<span id="cb22-3"><a href="#cb22-3" aria-hidden="true" tabindex="-1"></a>):</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p><em>The non-dead kernel model bound to notebook <code>path</code>, or None</em></p>
+</section>
+</div>
+<p><code>kernel_for</code> answers “which kernel has this notebook?”: the gateway’s <code>path</code> filter on the kernel list, reduced to the one live holder. A dead kernel keeps its binding but loses the lookup, so reopening a notebook whose kernel died finds nothing and creates afresh. It patches <a href="https://AnswerDotAI.github.io/jupyasyncclient/core.html#kernelapi"><code>KernelApi</code></a> and addresses the list route directly, since the kernel client’s own <code>kernel_request</code> fills in its <code>kernel_id</code>:</p>
+<div id="17e8a0b4" class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb23"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a>b <span class="op">=</span> JupyAsyncKernelClient(base_url)</span>
+<span id="cb23-2"><a href="#cb23-2" aria-hidden="true" tabindex="-1"></a><span class="cf">await</span> b.start_kernel(path<span class="op">=</span><span class="st">'bound.ipynb'</span>)</span>
+<span id="cb23-3"><a href="#cb23-3" aria-hidden="true" tabindex="-1"></a>found <span class="op">=</span> <span class="cf">await</span> kc.kernel_for(<span class="st">'bound.ipynb'</span>)</span>
+<span id="cb23-4"><a href="#cb23-4" aria-hidden="true" tabindex="-1"></a>test_eq(found[<span class="st">'id'</span>], b.kernel_id)</span>
+<span id="cb23-5"><a href="#cb23-5" aria-hidden="true" tabindex="-1"></a>test_eq(<span class="cf">await</span> kc.kernel_for(<span class="st">'unbound.ipynb'</span>), <span class="va">None</span>)</span>
+<span id="cb23-6"><a href="#cb23-6" aria-hidden="true" tabindex="-1"></a><span class="cf">await</span> b.shutdown_kernel()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<section id="how-it-works" class="level3">
+<h3 class="anchored" data-anchor-id="how-it-works">How it works</h3>
+<p>Routing is <code>jupywire.route.RouterOps</code>, shared with <code>conkernelclient</code>; DESIGN.md in jupywire states the full contract. Every inbound frame goes to <code>route</code>. A message parented to a <code>run()</code> in flight is collected by that run, while its <code>input_request</code> goes to the run’s <code>on_stdin</code> hook. A shell or control message whose parent msg_id has a <code>reply()</code> or request future resolves it. Everything unmatched goes to <code>on_jmsg</code>. A synthesized <code>status</code> message with <code>execution_state</code> <code>dead</code> fails every waiter first, so no caller sleeps through kernel death. The router also remembers the last <code>input_request</code> header, which <code>input()</code> uses below.</p>
+<div id="b14556be" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-09-06T07:05:56.134099+00:00&quot;,&quot;shell.execute_reply&quot;:&quot;2026-09-06T07:05:56.137173+00:00&quot;,&quot;total&quot;:0.003075927999987016}}" data-execution_count="26">
+<hr>
+<p><a href="https://github.com/AnswerDotAI/jupyasyncclient/blob/main/jupyasyncclient/core.py#L155" target="_blank" style="float:right; font-size:smaller">source</a></p>
+<section id="jupyasynckernelclient.send" class="level3">
+<h3 class="anchored" data-anchor-id="jupyasynckernelclient.send">JupyAsyncKernelClient.send</h3>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb24"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb24-1"><a href="#cb24-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> send(</span>
+<span id="cb24-2"><a href="#cb24-2" aria-hidden="true" tabindex="-1"></a>    msg, channel:<span class="bu">str</span></span>
+<span id="cb24-3"><a href="#cb24-3" aria-hidden="true" tabindex="-1"></a>):</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p><em>Serialize <code>msg</code> (binary framing when it carries buffers) and queue its frame for <code>_send_loop</code>; returns the msg_id.</em></p>
+</section>
+</div>
+<p><code>_start_ws</code> dials the channels endpoint and starts a fresh pair of loops:</p>
+<p>Sending is the mirror image. <code>_exec_req</code> builds a signed message and queues its frame at call time, returning the msg_id, so wire order is call order. <code>send</code> is the seam under everything: it serializes one message dict and queues its frame. <code>__getattr__</code> makes every <code>*_request</code> message type in the protocol callable by name, returning an awaitable of its reply; the typed wrappers further down only add convenient defaults. <code>reply()</code> and <code>run()</code> come from <code>RouterOps</code>, built over <code>execute</code> and <code>send</code>.</p>
+</section>
+<section id="connecting" class="level3">
+<h3 class="anchored" data-anchor-id="connecting">Connecting</h3>
+<div id="5ba4e3cf" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-09-06T07:05:56.144520+00:00&quot;,&quot;shell.execute_reply&quot;:&quot;2026-09-06T07:05:56.147356+00:00&quot;,&quot;total&quot;:0.0028371159999949214}}" data-execution_count="31">
+<hr>
+<p><a href="https://github.com/AnswerDotAI/jupyasyncclient/blob/main/jupyasyncclient/core.py#L228" target="_blank" style="float:right; font-size:smaller">source</a></p>
+<section id="jupyasynckernelclient.start_channels" class="level3">
+<h3 class="anchored" data-anchor-id="jupyasynckernelclient.start_channels">JupyAsyncKernelClient.start_channels</h3>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb25"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb25-1"><a href="#cb25-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> start_channels(</span>
+<span id="cb25-2"><a href="#cb25-2" aria-hidden="true" tabindex="-1"></a>    shell:<span class="bu">bool</span><span class="op">=</span><span class="va">True</span>, iopub:<span class="bu">bool</span><span class="op">=</span><span class="va">True</span>, stdin:<span class="bu">bool</span><span class="op">=</span><span class="va">True</span>, control:<span class="bu">bool</span><span class="op">=</span><span class="va">True</span></span>
+<span id="cb25-3"><a href="#cb25-3" aria-hidden="true" tabindex="-1"></a>):</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p><em>Call self as a function.</em></p>
+</section>
+</div>
+<div id="12ce19a5" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-09-06T07:05:56.148211+00:00&quot;,&quot;shell.execute_reply&quot;:&quot;2026-09-06T07:05:56.151084+00:00&quot;,&quot;total&quot;:0.0028763360000141347}}" data-execution_count="33">
+<hr>
+<p><a href="https://github.com/AnswerDotAI/jupyasyncclient/blob/main/jupyasyncclient/core.py#L236" target="_blank" style="float:right; font-size:smaller">source</a></p>
+<section id="jupyasynckernelclient.channels_running" class="level3">
+<h3 class="anchored" data-anchor-id="jupyasynckernelclient.channels_running">JupyAsyncKernelClient.channels_running</h3>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb26"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb26-1"><a href="#cb26-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> channels_running():</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p><em>Call self as a function.</em></p>
+</section>
+</div>
+<p><code>start_channels</code> opens the websocket (session id and token as query params) and starts the loops; <code>channels_running</code> reports the live state. It returns immediately: readiness is <code>wait_for_ready</code>’s job.</p>
+<p><code>route</code> hands everything unmatched to <code>on_jmsg</code>, and a client with no callback drops it. Pull-style consumers attach <code>JmsgQueues</code>, which registers itself as the callback and queues each message by channel, raising <code>queue.Empty</code> on a <code>get</code> timeout. This page attaches one below, folding iopub, stdin, and the gateway’s cells channel into one <code>jmsg</code> queue. <code>cells</code> carries a gateway’s notebook change broadcasts (<code>cell_ops</code> messages); the files page demonstrates it.</p>
+<div id="15bc70a7" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-09-06T07:05:56.151984+00:00&quot;,&quot;shell.execute_reply&quot;:&quot;2026-09-06T07:05:56.154932+00:00&quot;,&quot;total&quot;:0.0029507950000038363}}" data-execution_count="35">
+<hr>
+<p><a href="https://github.com/AnswerDotAI/jupyasyncclient/blob/main/jupyasyncclient/core.py#L240" target="_blank" style="float:right; font-size:smaller">source</a></p>
+<section id="jupyasynckernelclient.wait_for_ready" class="level3">
+<h3 class="anchored" data-anchor-id="jupyasynckernelclient.wait_for_ready">JupyAsyncKernelClient.wait_for_ready</h3>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb27"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb27-1"><a href="#cb27-1" aria-hidden="true" tabindex="-1"></a><span class="cf">async</span> <span class="kw">def</span> wait_for_ready(</span>
+<span id="cb27-2"><a href="#cb27-2" aria-hidden="true" tabindex="-1"></a>    timeout:NoneType<span class="op">=</span><span class="va">None</span></span>
+<span id="cb27-3"><a href="#cb27-3" aria-hidden="true" tabindex="-1"></a>):</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p><em>Call self as a function.</em></p>
+</section>
+</div>
+<p><code>wait_for_ready</code> is one <code>kernel_info</code> round trip. On a reattach the gateway replays the frames this <code>session_id</code> missed, and readiness must not eat them; the <code>kernel_info</code> status chatter goes to <code>on_jmsg</code>, harmless because a handler tolerates message types it does not use. Over a websocket readiness is purely about the kernel being up: there is no subscription race to compensate for, since the gateway handled zmq subscription on its side. It calls the generated <code>kernel_info_request</code> rather than the typed wrapper defined further down, so the machinery above is all it needs.</p>
+<div id="73410263" class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb28"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb28-1"><a href="#cb28-1" aria-hidden="true" tabindex="-1"></a>kc.start_channels()</span>
+<span id="cb28-2"><a href="#cb28-2" aria-hidden="true" tabindex="-1"></a><span class="cf">await</span> kc.wait_for_ready(timeout<span class="op">=</span><span class="dv">60</span>)</span>
+<span id="cb28-3"><a href="#cb28-3" aria-hidden="true" tabindex="-1"></a>kc.channels_running</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-display">
+<pre><code>True</code></pre>
+</div>
+</div>
+<p>A raw generated sender, awaited (<code>comm_info_request</code> has no typed wrapper here):</p>
+<div id="1ec2d159" class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb30"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb30-1"><a href="#cb30-1" aria-hidden="true" tabindex="-1"></a>m <span class="op">=</span> <span class="cf">await</span> kc.comm_info_request(timeout<span class="op">=</span><span class="dv">15</span>)</span>
+<span id="cb30-2"><a href="#cb30-2" aria-hidden="true" tabindex="-1"></a>m[<span class="st">'msg_type'</span>]</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+</section>
+<section id="the-request-api" class="level3">
+<h3 class="anchored" data-anchor-id="the-request-api">The request API</h3>
+<div id="ca021d00" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-09-06T07:05:56.156626+00:00&quot;,&quot;shell.execute_reply&quot;:&quot;2026-09-06T07:05:56.160178+00:00&quot;,&quot;total&quot;:0.003554550000018253}}" data-execution_count="37">
+<hr>
+<p><a href="https://github.com/AnswerDotAI/jupyasyncclient/blob/main/jupyasyncclient/core.py#L246" target="_blank" style="float:right; font-size:smaller">source</a></p>
+<section id="jupyasynckernelclient.execute" class="level3">
+<h3 class="anchored" data-anchor-id="jupyasynckernelclient.execute">JupyAsyncKernelClient.execute</h3>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb31"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb31-1"><a href="#cb31-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> execute(</span>
+<span id="cb31-2"><a href="#cb31-2" aria-hidden="true" tabindex="-1"></a>    code, silent:<span class="bu">bool</span><span class="op">=</span><span class="va">False</span>, store_history:<span class="bu">bool</span><span class="op">=</span><span class="va">True</span>, user_expressions:NoneType<span class="op">=</span><span class="va">None</span>, allow_stdin:NoneType<span class="op">=</span><span class="va">None</span>,</span>
+<span id="cb31-3"><a href="#cb31-3" aria-hidden="true" tabindex="-1"></a>    stop_on_error:<span class="bu">bool</span><span class="op">=</span><span class="va">True</span>, msg_id:NoneType<span class="op">=</span><span class="va">None</span>, metadata:NoneType<span class="op">=</span><span class="va">None</span>, subshell_id:NoneType<span class="op">=</span><span class="va">None</span>,</span>
+<span id="cb31-4"><a href="#cb31-4" aria-hidden="true" tabindex="-1"></a>    buffers:NoneType<span class="op">=</span><span class="va">None</span></span>
+<span id="cb31-5"><a href="#cb31-5" aria-hidden="true" tabindex="-1"></a>):</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p><em>Send an <code>execute_request</code>, fire-and-forget; returns its msg_id.</em></p>
+</section>
+</div>
+<p>The lessons below read the merged stream, so attach the pull adapter now. An execute nobody awaits broadcasts its output into it:</p>
+<div id="2c93152e" class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb32"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb32-1"><a href="#cb32-1" aria-hidden="true" tabindex="-1"></a>qs <span class="op">=</span> JmsgQueues(kc, queues<span class="op">=</span>(<span class="st">'shell'</span>, <span class="st">'control'</span>, <span class="st">'jmsg'</span>), merge<span class="op">=</span><span class="bu">dict</span>(iopub<span class="op">=</span><span class="st">'jmsg'</span>, stdin<span class="op">=</span><span class="st">'jmsg'</span>, cells<span class="op">=</span><span class="st">'jmsg'</span>))</span>
+<span id="cb32-2"><a href="#cb32-2" aria-hidden="true" tabindex="-1"></a>kc.execute(<span class="st">"print('unread')"</span>)</span>
+<span id="cb32-3"><a href="#cb32-3" aria-hidden="true" tabindex="-1"></a>s <span class="op">=</span> <span class="cf">await</span> qs.jmsg_for(<span class="st">'stream'</span>, timeout<span class="op">=</span><span class="dv">15</span>)</span>
+<span id="cb32-4"><a href="#cb32-4" aria-hidden="true" tabindex="-1"></a>s[<span class="st">'content'</span>][<span class="st">'text'</span>]</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<p><code>reply</code> awaits the <code>execute_reply</code>; the execute’s iopub arrives independently through <code>on_jmsg</code>.</p>
+<div id="7b7e7373" class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb33"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb33-1"><a href="#cb33-1" aria-hidden="true" tabindex="-1"></a>rep <span class="op">=</span> <span class="cf">await</span> kc.reply(<span class="st">"print('hello'); 6*7"</span>, timeout<span class="op">=</span><span class="dv">30</span>)</span>
+<span id="cb33-2"><a href="#cb33-2" aria-hidden="true" tabindex="-1"></a>test_eq(rep[<span class="st">'content'</span>][<span class="st">'status'</span>], <span class="st">'ok'</span>)</span>
+<span id="cb33-3"><a href="#cb33-3" aria-hidden="true" tabindex="-1"></a>s <span class="op">=</span> <span class="cf">await</span> qs.jmsg_for(<span class="st">'stream'</span>, timeout<span class="op">=</span><span class="dv">15</span>)</span>
+<span id="cb33-4"><a href="#cb33-4" aria-hidden="true" tabindex="-1"></a>r <span class="op">=</span> <span class="cf">await</span> qs.jmsg_for(<span class="st">'execute_result'</span>, timeout<span class="op">=</span><span class="dv">15</span>)</span>
+<span id="cb33-5"><a href="#cb33-5" aria-hidden="true" tabindex="-1"></a><span class="bu">dict</span>(stream<span class="op">=</span>s[<span class="st">'content'</span>][<span class="st">'text'</span>].strip(), result<span class="op">=</span>r[<span class="st">'content'</span>][<span class="st">'data'</span>][<span class="st">'text/plain'</span>])</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<p><code>pred=</code> narrows beyond the type. The execute above has left its <code>status</code> chatter queued; the predicate picks out the idle:</p>
+<div id="119f3c54" class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb34"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb34-1"><a href="#cb34-1" aria-hidden="true" tabindex="-1"></a>idle <span class="op">=</span> <span class="cf">await</span> qs.jmsg_for(<span class="st">'status'</span>, pred<span class="op">=</span><span class="kw">lambda</span> m: m[<span class="st">'content'</span>][<span class="st">'execution_state'</span>]<span class="op">==</span><span class="st">'idle'</span>, timeout<span class="op">=</span><span class="dv">15</span>)</span>
+<span id="cb34-2"><a href="#cb34-2" aria-hidden="true" tabindex="-1"></a>idle[<span class="st">'content'</span>][<span class="st">'execution_state'</span>]</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<p>Requests are concurrency-safe: fire several, gather the replies; each future resolves from its own parent msg_id. Every request is on the wire before its call returns, so submission order never depends on await order.</p>
+<div id="28f3e4ec" class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb35"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb35-1"><a href="#cb35-1" aria-hidden="true" tabindex="-1"></a>reps <span class="op">=</span> <span class="cf">await</span> asyncio.gather(<span class="op">*</span>[kc.reply(<span class="ss">f'</span><span class="sc">{</span>i<span class="sc">}</span><span class="ss">*</span><span class="sc">{</span>i<span class="sc">}</span><span class="ss">'</span>, timeout<span class="op">=</span><span class="dv">30</span>) <span class="cf">for</span> i <span class="kw">in</span> <span class="bu">range</span>(<span class="dv">5</span>)])</span>
+<span id="cb35-2"><a href="#cb35-2" aria-hidden="true" tabindex="-1"></a>[r[<span class="st">'content'</span>][<span class="st">'status'</span>] <span class="cf">for</span> r <span class="kw">in</span> reps]</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<p>A host can choose the request’s msg_id rather than accepting a generated one: <code>msg_id=</code> on <code>execute</code>, <code>reply</code>, or <code>run</code> becomes the header id, and every message the request produces carries it back in <code>parent_header</code>. That is how a host attributes streamed output to its own units of work, e.g.&nbsp;solveit’s <code>{message_id}.{token}</code> scheme:</p>
+<div id="6c515153" class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb36"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb36-1"><a href="#cb36-1" aria-hidden="true" tabindex="-1"></a>rep <span class="op">=</span> <span class="cf">await</span> kc.reply(<span class="st">"21*2"</span>, timeout<span class="op">=</span><span class="dv">30</span>, msg_id<span class="op">=</span><span class="st">'myid.abc123'</span>)</span>
+<span id="cb36-2"><a href="#cb36-2" aria-hidden="true" tabindex="-1"></a>test_eq(rep[<span class="st">'parent_header'</span>][<span class="st">'msg_id'</span>], <span class="st">'myid.abc123'</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<p>A <code>reply</code> await that gives up cleans up: timing out (or being cancelled) pops the pending entry, so a late <code>execute_reply</code> is claimed by nobody and reaches <code>on_jmsg</code> with the rest of the unrouted traffic:</p>
+<div id="457d5604" class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb37"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb37-1"><a href="#cb37-1" aria-hidden="true" tabindex="-1"></a>lid <span class="op">=</span> <span class="ss">f'late.</span><span class="sc">{</span>uuid<span class="sc">.</span>uuid4()<span class="sc">.</span><span class="bu">hex</span>[:<span class="dv">6</span>]<span class="sc">}</span><span class="ss">'</span></span>
+<span id="cb37-2"><a href="#cb37-2" aria-hidden="true" tabindex="-1"></a>w <span class="op">=</span> kc.reply(<span class="st">'import time; time.sleep(1)'</span>, timeout<span class="op">=</span><span class="fl">0.25</span>, msg_id<span class="op">=</span>lid)</span>
+<span id="cb37-3"><a href="#cb37-3" aria-hidden="true" tabindex="-1"></a><span class="cf">with</span> ExceptionExpected(<span class="pp">TimeoutError</span>): <span class="cf">await</span> w</span>
+<span id="cb37-4"><a href="#cb37-4" aria-hidden="true" tabindex="-1"></a><span class="cf">assert</span> lid <span class="kw">not</span> <span class="kw">in</span> kc.replies</span>
+<span id="cb37-5"><a href="#cb37-5" aria-hidden="true" tabindex="-1"></a>late <span class="op">=</span> <span class="cf">await</span> qs.jmsg_for(<span class="st">'execute_reply'</span>, queue<span class="op">=</span><span class="st">'shell'</span>, pred<span class="op">=</span><span class="kw">lambda</span> m: m[<span class="st">'parent_header'</span>][<span class="st">'msg_id'</span>]<span class="op">==</span>lid, timeout<span class="op">=</span><span class="dv">15</span>)</span>
+<span id="cb37-6"><a href="#cb37-6" aria-hidden="true" tabindex="-1"></a>late[<span class="st">'msg_type'</span>]</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<p>Subshells (JEP 91) pass through gateway and kernel untouched. Creation can request a stable id and is idempotent, while omitting the id creates a fresh subshell. The main shell keeps answering while a subshell is busy; <code>list_subshell</code> names the live ids.</p>
+<div id="c293ab1e" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-09-06T07:05:56.162557+00:00&quot;,&quot;shell.execute_reply&quot;:&quot;2026-09-06T07:05:56.165034+00:00&quot;,&quot;total&quot;:0.0024798579999867343}}" data-execution_count="39">
+<hr>
+<p><a href="https://github.com/AnswerDotAI/jupyasyncclient/blob/main/jupyasyncclient/core.py#L265" target="_blank" style="float:right; font-size:smaller">source</a></p>
+<section id="jupyasynckernelclient.delete_subshell" class="level3">
+<h3 class="anchored" data-anchor-id="jupyasynckernelclient.delete_subshell">JupyAsyncKernelClient.delete_subshell</h3>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb38"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb38-1"><a href="#cb38-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> delete_subshell(</span>
+<span id="cb38-2"><a href="#cb38-2" aria-hidden="true" tabindex="-1"></a>    subshell_id:<span class="bu">str</span>, timeout:NoneType<span class="op">=</span><span class="va">None</span></span>
+<span id="cb38-3"><a href="#cb38-3" aria-hidden="true" tabindex="-1"></a>):</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p><em>Call self as a function.</em></p>
+</section>
+</div>
+<div id="d23b3e73" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-09-06T07:05:56.165124+00:00&quot;,&quot;shell.execute_reply&quot;:&quot;2026-09-06T07:05:56.167551+00:00&quot;,&quot;total&quot;:0.00242898400000513}}" data-execution_count="40">
+<hr>
+<p><a href="https://github.com/AnswerDotAI/jupyasyncclient/blob/main/jupyasyncclient/core.py#L262" target="_blank" style="float:right; font-size:smaller">source</a></p>
+<section id="jupyasynckernelclient.list_subshell" class="level3">
+<h3 class="anchored" data-anchor-id="jupyasynckernelclient.list_subshell">JupyAsyncKernelClient.list_subshell</h3>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb39"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb39-1"><a href="#cb39-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> list_subshell(</span>
+<span id="cb39-2"><a href="#cb39-2" aria-hidden="true" tabindex="-1"></a>    timeout:NoneType<span class="op">=</span><span class="va">None</span></span>
+<span id="cb39-3"><a href="#cb39-3" aria-hidden="true" tabindex="-1"></a>):</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p><em>Call self as a function.</em></p>
+</section>
+</div>
+<div id="9f3fb8ee" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-09-06T07:05:56.167640+00:00&quot;,&quot;shell.execute_reply&quot;:&quot;2026-09-06T07:05:56.170105+00:00&quot;,&quot;total&quot;:0.0024665530000049785}}" data-execution_count="41">
+<hr>
+<p><a href="https://github.com/AnswerDotAI/jupyasyncclient/blob/main/jupyasyncclient/core.py#L258" target="_blank" style="float:right; font-size:smaller">source</a></p>
+<section id="jupyasynckernelclient.create_subshell" class="level3">
+<h3 class="anchored" data-anchor-id="jupyasynckernelclient.create_subshell">JupyAsyncKernelClient.create_subshell</h3>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb40"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb40-1"><a href="#cb40-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> create_subshell(</span>
+<span id="cb40-2"><a href="#cb40-2" aria-hidden="true" tabindex="-1"></a>    subshell_id:NoneType<span class="op">=</span><span class="va">None</span>, timeout:NoneType<span class="op">=</span><span class="va">None</span></span>
+<span id="cb40-3"><a href="#cb40-3" aria-hidden="true" tabindex="-1"></a>):</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p><em>Call self as a function.</em></p>
+</section>
+</div>
+<div id="b749ba01" class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb41"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb41-1"><a href="#cb41-1" aria-hidden="true" tabindex="-1"></a>sub <span class="op">=</span> (<span class="cf">await</span> kc.create_subshell(<span class="st">'lesson-sidecar'</span>, timeout<span class="op">=</span><span class="dv">15</span>))[<span class="st">'content'</span>][<span class="st">'subshell_id'</span>]</span>
+<span id="cb41-2"><a href="#cb41-2" aria-hidden="true" tabindex="-1"></a>same <span class="op">=</span> (<span class="cf">await</span> kc.create_subshell(<span class="st">'lesson-sidecar'</span>, timeout<span class="op">=</span><span class="dv">15</span>))[<span class="st">'content'</span>][<span class="st">'subshell_id'</span>]</span>
+<span id="cb41-3"><a href="#cb41-3" aria-hidden="true" tabindex="-1"></a>test_eq((sub, same), (<span class="st">'lesson-sidecar'</span>, <span class="st">'lesson-sidecar'</span>))</span>
+<span id="cb41-4"><a href="#cb41-4" aria-hidden="true" tabindex="-1"></a><span class="cf">assert</span> sub <span class="kw">in</span> (<span class="cf">await</span> kc.list_subshell(timeout<span class="op">=</span><span class="dv">15</span>))[<span class="st">'content'</span>][<span class="st">'subshell_id'</span>]</span>
+<span id="cb41-5"><a href="#cb41-5" aria-hidden="true" tabindex="-1"></a>busy <span class="op">=</span> kc.reply(<span class="st">'import time; time.sleep(1.5)'</span>, timeout<span class="op">=</span><span class="dv">30</span>, subshell_id<span class="op">=</span>sub)</span>
+<span id="cb41-6"><a href="#cb41-6" aria-hidden="true" tabindex="-1"></a>matches,_ <span class="op">=</span> <span class="cf">await</span> kc.complete(<span class="st">'imp'</span>, timeout<span class="op">=</span><span class="dv">1</span>)</span>
+<span id="cb41-7"><a href="#cb41-7" aria-hidden="true" tabindex="-1"></a>rep <span class="op">=</span> <span class="cf">await</span> busy</span>
+<span id="cb41-8"><a href="#cb41-8" aria-hidden="true" tabindex="-1"></a><span class="cf">await</span> kc.delete_subshell(sub, timeout<span class="op">=</span><span class="dv">15</span>)</span>
+<span id="cb41-9"><a href="#cb41-9" aria-hidden="true" tabindex="-1"></a>rep[<span class="st">'content'</span>][<span class="st">'status'</span>], rep[<span class="st">'parent_header'</span>][<span class="st">'subshell_id'</span>]<span class="op">==</span>sub, <span class="st">'import'</span> <span class="kw">in</span> matches</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<div id="5b2ae277" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-09-06T07:05:56.171465+00:00&quot;,&quot;shell.execute_reply&quot;:&quot;2026-09-06T07:05:56.174312+00:00&quot;,&quot;total&quot;:0.002849045000004935}}" data-execution_count="43">
+<hr>
+<p><a href="https://github.com/AnswerDotAI/jupyasyncclient/blob/main/jupyasyncclient/core.py#L270" target="_blank" style="float:right; font-size:smaller">source</a></p>
+<section id="jupyasynckernelclient.release" class="level3">
+<h3 class="anchored" data-anchor-id="jupyasynckernelclient.release">JupyAsyncKernelClient.release</h3>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb42"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb42-1"><a href="#cb42-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> release(</span>
+<span id="cb42-2"><a href="#cb42-2" aria-hidden="true" tabindex="-1"></a>    msg_id:<span class="bu">str</span>, status:<span class="bu">str</span><span class="op">=</span><span class="st">'ok'</span>, timeout:NoneType<span class="op">=</span><span class="va">None</span></span>
+<span id="cb42-3"><a href="#cb42-3" aria-hidden="true" tabindex="-1"></a>):</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p><em>Complete a held execute (kernmini’s <code>hold</code> metadata); <code>status='error'</code> makes the hold’s reply an error, engaging the kernel’s stop-on-error tail abort</em></p>
+</section>
+</div>
+<p>A held execute — kernmini’s <code>hold</code> execute-metadata — parks the kernel’s queue while work happens outside the kernel, and <code>priority</code> metadata lets designated requests overtake whatever is queued (highest first, FIFO within a level). Both ride ordinary execute metadata, so they pass through the gateway untouched; <code>release</code> completes the hold from the control channel, and <code>found</code> reports whether it was still parked (a late release after a timeout is a quiet no-op):</p>
+<div id="184b1e0c" class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb43"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb43-1"><a href="#cb43-1" aria-hidden="true" tabindex="-1"></a>hid <span class="op">=</span> <span class="ss">f'hold1.</span><span class="sc">{</span>uuid<span class="sc">.</span>uuid4()<span class="sc">.</span><span class="bu">hex</span>[:<span class="dv">6</span>]<span class="sc">}</span><span class="ss">'</span></span>
+<span id="cb43-2"><a href="#cb43-2" aria-hidden="true" tabindex="-1"></a>kc.execute(<span class="st">''</span>, metadata<span class="op">=</span><span class="bu">dict</span>(hold<span class="op">=</span><span class="va">True</span>), msg_id<span class="op">=</span>hid)</span>
+<span id="cb43-3"><a href="#cb43-3" aria-hidden="true" tabindex="-1"></a>tail <span class="op">=</span> kc.reply(<span class="st">"'after the hold'"</span>, timeout<span class="op">=</span><span class="dv">30</span>)</span>
+<span id="cb43-4"><a href="#cb43-4" aria-hidden="true" tabindex="-1"></a>jump <span class="op">=</span> <span class="cf">await</span> kc.reply(<span class="st">"'jumped'"</span>, timeout<span class="op">=</span><span class="dv">30</span>, metadata<span class="op">=</span><span class="bu">dict</span>(priority<span class="op">=</span><span class="dv">1</span>))</span>
+<span id="cb43-5"><a href="#cb43-5" aria-hidden="true" tabindex="-1"></a>test_eq(jump[<span class="st">'content'</span>][<span class="st">'status'</span>], <span class="st">'ok'</span>)</span>
+<span id="cb43-6"><a href="#cb43-6" aria-hidden="true" tabindex="-1"></a>rel <span class="op">=</span> <span class="cf">await</span> kc.release(hid, timeout<span class="op">=</span><span class="dv">15</span>)</span>
+<span id="cb43-7"><a href="#cb43-7" aria-hidden="true" tabindex="-1"></a>test_eq(rel[<span class="st">'content'</span>][<span class="st">'found'</span>], <span class="va">True</span>)</span>
+<span id="cb43-8"><a href="#cb43-8" aria-hidden="true" tabindex="-1"></a>test_eq((<span class="cf">await</span> tail)[<span class="st">'content'</span>][<span class="st">'status'</span>], <span class="st">'ok'</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<p>A hold released with <code>status='error'</code> aborts the queued tail, exactly as a cell error does under <code>stop_on_error</code> — and the aborted requests still resolve every waiting <code>reply()</code>, with <code>status='aborted'</code>. Shell and control diverge at the gateway’s zmq hop, so a short pause makes sure the tail is queued before the release lands:</p>
+<div id="4b3316a5" class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb44"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb44-1"><a href="#cb44-1" aria-hidden="true" tabindex="-1"></a>hid <span class="op">=</span> <span class="ss">f'hold2.</span><span class="sc">{</span>uuid<span class="sc">.</span>uuid4()<span class="sc">.</span><span class="bu">hex</span>[:<span class="dv">6</span>]<span class="sc">}</span><span class="ss">'</span></span>
+<span id="cb44-2"><a href="#cb44-2" aria-hidden="true" tabindex="-1"></a>kc.execute(<span class="st">''</span>, metadata<span class="op">=</span><span class="bu">dict</span>(hold<span class="op">=</span><span class="va">True</span>), msg_id<span class="op">=</span>hid)</span>
+<span id="cb44-3"><a href="#cb44-3" aria-hidden="true" tabindex="-1"></a>t2 <span class="op">=</span> kc.reply(<span class="st">"'never runs'"</span>, timeout<span class="op">=</span><span class="dv">30</span>)</span>
+<span id="cb44-4"><a href="#cb44-4" aria-hidden="true" tabindex="-1"></a><span class="cf">await</span> asyncio.sleep(<span class="fl">0.2</span>)</span>
+<span id="cb44-5"><a href="#cb44-5" aria-hidden="true" tabindex="-1"></a><span class="cf">await</span> kc.release(hid, status<span class="op">=</span><span class="st">'error'</span>, timeout<span class="op">=</span><span class="dv">15</span>)</span>
+<span id="cb44-6"><a href="#cb44-6" aria-hidden="true" tabindex="-1"></a>test_eq((<span class="cf">await</span> t2)[<span class="st">'content'</span>][<span class="st">'status'</span>], <span class="st">'aborted'</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<p><code>input()</code> answers the pending prompt, parented to it (the router remembered the <code>input_request</code> header).</p>
+<div id="2741c278" class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb45"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb45-1"><a href="#cb45-1" aria-hidden="true" tabindex="-1"></a>fut <span class="op">=</span> asyncio.ensure_future(kc.reply(<span class="st">"name = input('who? ')"</span>, timeout<span class="op">=</span><span class="dv">30</span>))</span>
+<span id="cb45-2"><a href="#cb45-2" aria-hidden="true" tabindex="-1"></a>prompt <span class="op">=</span> <span class="cf">await</span> qs.jmsg_for(<span class="st">'input_request'</span>, timeout<span class="op">=</span><span class="dv">15</span>)</span>
+<span id="cb45-3"><a href="#cb45-3" aria-hidden="true" tabindex="-1"></a>kc.<span class="bu">input</span>(<span class="st">'Jeremy'</span>)</span>
+<span id="cb45-4"><a href="#cb45-4" aria-hidden="true" tabindex="-1"></a><span class="cf">await</span> fut</span>
+<span id="cb45-5"><a href="#cb45-5" aria-hidden="true" tabindex="-1"></a>rep <span class="op">=</span> <span class="cf">await</span> kc.reply(<span class="st">'name'</span>, timeout<span class="op">=</span><span class="dv">30</span>, user_expressions<span class="op">=</span>{<span class="st">'v'</span>:<span class="st">'name'</span>})</span>
+<span id="cb45-6"><a href="#cb45-6" aria-hidden="true" tabindex="-1"></a>rep[<span class="st">'content'</span>][<span class="st">'user_expressions'</span>][<span class="st">'v'</span>][<span class="st">'data'</span>][<span class="st">'text/plain'</span>]</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<p>The raw <code>*_request</code> senders mirror the wire protocol, each returning an awaitable of its reply. <code>request</code> is the same thing with a name argument instead of a generated attribute, and <code>shell</code> and <code>control</code> name its channel. It is the seam <code>RouterOps</code>’s typed verbs are written over, so <code>complete</code>, <code>inspect</code>, <code>check</code>, <code>history</code>, and the <code>comm_msg</code> sender all come from <code>jupywire.route</code> - the ergonomic values a frontend actually wants (unwrapped results, cursor position defaulted to the end), identical across this client and <code>conkernelclient</code>:</p>
+<div id="07e8e2ec" class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb46"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb46-1"><a href="#cb46-1" aria-hidden="true" tabindex="-1"></a>matches, start <span class="op">=</span> <span class="cf">await</span> kc.complete(<span class="st">'imp'</span>)</span>
+<span id="cb46-2"><a href="#cb46-2" aria-hidden="true" tabindex="-1"></a><span class="cf">assert</span> <span class="st">'import'</span> <span class="kw">in</span> matches</span>
+<span id="cb46-3"><a href="#cb46-3" aria-hidden="true" tabindex="-1"></a>matches[:<span class="dv">3</span>]</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-display">
+<pre><code>['import']</code></pre>
+</div>
+</div>
+<div id="0af2fd02" class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb48"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb48-1"><a href="#cb48-1" aria-hidden="true" tabindex="-1"></a>txt <span class="op">=</span> <span class="cf">await</span> kc.inspect(<span class="st">'print'</span>)</span>
+<span id="cb48-2"><a href="#cb48-2" aria-hidden="true" tabindex="-1"></a><span class="cf">assert</span> <span class="st">'print'</span> <span class="kw">in</span> txt</span>
+<span id="cb48-3"><a href="#cb48-3" aria-hidden="true" tabindex="-1"></a>test_eq(<span class="cf">await</span> kc.inspect(<span class="st">'no_such_name_here'</span>), <span class="st">''</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-display">
+<pre><code>True</code></pre>
+</div>
+</div>
+<div id="22f3ac46" class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb50"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb50-1"><a href="#cb50-1" aria-hidden="true" tabindex="-1"></a>h <span class="op">=</span> <span class="cf">await</span> kc.history(timeout<span class="op">=</span><span class="dv">15</span>)</span>
+<span id="cb50-2"><a href="#cb50-2" aria-hidden="true" tabindex="-1"></a><span class="bu">len</span>(h[<span class="st">'content'</span>][<span class="st">'history'</span>]) <span class="op">&gt;</span> <span class="dv">0</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-display">
+<pre><code>True</code></pre>
+</div>
+</div>
+<p><code>comm_info</code> and <code>kernel_info</code> keep the conventional wrapper shape; <code>check</code> (over <code>is_complete_request</code>) is the one frontends poll while the user types:</p>
+<div id="988092de" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-09-06T07:05:56.176474+00:00&quot;,&quot;shell.execute_reply&quot;:&quot;2026-09-06T07:05:56.178838+00:00&quot;,&quot;total&quot;:0.0023656649999850288}}" data-execution_count="45">
+<hr>
+<p><a href="https://github.com/AnswerDotAI/jupyasyncclient/blob/main/jupyasyncclient/core.py#L280" target="_blank" style="float:right; font-size:smaller">source</a></p>
+<section id="jupyasynckernelclient.kernel_info" class="level3">
+<h3 class="anchored" data-anchor-id="jupyasynckernelclient.kernel_info">JupyAsyncKernelClient.kernel_info</h3>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb52"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb52-1"><a href="#cb52-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> kernel_info(</span>
+<span id="cb52-2"><a href="#cb52-2" aria-hidden="true" tabindex="-1"></a>    timeout:NoneType<span class="op">=</span><span class="va">None</span></span>
+<span id="cb52-3"><a href="#cb52-3" aria-hidden="true" tabindex="-1"></a>):</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p><em>Call self as a function.</em></p>
+</section>
+</div>
+<div id="389a1f9d" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-09-06T07:05:56.178928+00:00&quot;,&quot;shell.execute_reply&quot;:&quot;2026-09-06T07:05:56.181339+00:00&quot;,&quot;total&quot;:0.0024124830000005204}}" data-execution_count="46">
+<hr>
+<p><a href="https://github.com/AnswerDotAI/jupyasyncclient/blob/main/jupyasyncclient/core.py#L276" target="_blank" style="float:right; font-size:smaller">source</a></p>
+<section id="jupyasynckernelclient.comm_info" class="level3">
+<h3 class="anchored" data-anchor-id="jupyasynckernelclient.comm_info">JupyAsyncKernelClient.comm_info</h3>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb53"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb53-1"><a href="#cb53-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> comm_info(</span>
+<span id="cb53-2"><a href="#cb53-2" aria-hidden="true" tabindex="-1"></a>    target_name:NoneType<span class="op">=</span><span class="va">None</span>, timeout:NoneType<span class="op">=</span><span class="va">None</span></span>
+<span id="cb53-3"><a href="#cb53-3" aria-hidden="true" tabindex="-1"></a>):</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p><em>Call self as a function.</em></p>
+</section>
+</div>
+<div id="5ee05b5a" class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb54"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb54-1"><a href="#cb54-1" aria-hidden="true" tabindex="-1"></a>test_eq(<span class="cf">await</span> kc.check(<span class="st">'for i in range(3):'</span>), (<span class="st">'incomplete'</span>, <span class="st">'    '</span>))</span>
+<span id="cb54-2"><a href="#cb54-2" aria-hidden="true" tabindex="-1"></a>test_eq((<span class="cf">await</span> kc.check(<span class="st">'1+1'</span>))[<span class="dv">0</span>], <span class="st">'complete'</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-display">
+<pre><code>'incomplete'</code></pre>
+</div>
+</div>
+</section>
+<section id="calling-kernel-functions" class="level3">
+<h3 class="anchored" data-anchor-id="calling-kernel-functions">Calling kernel functions</h3>
+<p><code>reply</code> comes from <code>RouterOps</code>: it sends the execute at call time and returns an awaitable of the <code>execute_reply</code>. <code>eval</code> turns the <code>user_expressions</code> round trip into a function call: run <code>func(*args, **kw)</code> kernel-side (awaiting coroutines), bring the result back by repr, and reconstruct it client-side — <code>try_eval</code> wraps primitive results in a dynamic class named after the kernel-side type. <code>call_=False</code> evaluates <code>func</code> as a bare expression. <code>ipy</code> targets <code>get_ipython()</code> methods, and the generated service methods mirror what <code>ipyfuncs</code> patches onto the kernel’s shell (<code>sig_help</code>, <code>get_schemas</code>, <code>ranked_complete</code>, …). The whole family is inherited from jupywire’s <code>EvalOps</code> mixin over this module’s <code>reply</code> — one definition shared with <code>conkernelclient</code>, so callers read identically over zmq and websockets. <code>sidecar_=True</code> tags a call for kernmini’s persistent named sidecar, which is created on first use. Service methods and variable operations (<code>xpush</code>, <code>get_vars</code>, <code>eval_exprs</code>, and <code>retr</code>) default to that serial lane; ordinary <code>eval</code> defaults to the main shell. Numeric <code>priority</code> execute metadata remains the separate queue-overtaking feature demonstrated by the held turn above.</p>
+<div id="fc316ffb" class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb56"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb56-1"><a href="#cb56-1" aria-hidden="true" tabindex="-1"></a>r <span class="op">=</span> <span class="cf">await</span> kc.reply(<span class="st">'def add(a, b): return a+b'</span>)</span>
+<span id="cb56-2"><a href="#cb56-2" aria-hidden="true" tabindex="-1"></a>test_eq(r[<span class="st">'content'</span>][<span class="st">'status'</span>], <span class="st">'ok'</span>)</span>
+<span id="cb56-3"><a href="#cb56-3" aria-hidden="true" tabindex="-1"></a>test_eq(<span class="cf">await</span> kc.<span class="bu">eval</span>(<span class="st">'add'</span>, a<span class="op">=</span><span class="dv">10</span>, b<span class="op">=</span><span class="dv">20</span>), <span class="dv">30</span>)</span>
+<span id="cb56-4"><a href="#cb56-4" aria-hidden="true" tabindex="-1"></a><span class="cf">await</span> kc.reply(<span class="st">'a = [1,2,3]'</span>)</span>
+<span id="cb56-5"><a href="#cb56-5" aria-hidden="true" tabindex="-1"></a>test_eq(<span class="cf">await</span> kc.<span class="bu">eval</span>(<span class="st">'a'</span>, call_<span class="op">=</span><span class="va">False</span>), [<span class="dv">1</span>,<span class="dv">2</span>,<span class="dv">3</span>])</span>
+<span id="cb56-6"><a href="#cb56-6" aria-hidden="true" tabindex="-1"></a>test_eq(<span class="cf">await</span> kc.<span class="bu">eval</span>(<span class="st">'add'</span>, a<span class="op">=</span><span class="dv">30</span>, b<span class="op">=</span><span class="dv">40</span>, literal_<span class="op">=</span><span class="va">False</span>), <span class="st">'70'</span>)</span>
+<span id="cb56-7"><a href="#cb56-7" aria-hidden="true" tabindex="-1"></a>_r <span class="op">=</span> <span class="cf">await</span> kc.<span class="bu">eval</span>(<span class="st">'missing_fn'</span>)</span>
+<span id="cb56-8"><a href="#cb56-8" aria-hidden="true" tabindex="-1"></a><span class="cf">assert</span> <span class="st">'NameError'</span> <span class="kw">in</span> _r</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<p><code>eval_expr</code> (also shared, from <code>EvalOps</code>) is the expression-only sibling: no function call machinery, just one <code>user_expressions</code> round trip, the repr parsed back via <code>literal_eval</code> where its form allows. Unlike <code>eval</code>, a kernel-side error raises <code>EvalError</code> rather than returning the traceback as a string:</p>
+<div id="9090ea86" class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb57"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb57-1"><a href="#cb57-1" aria-hidden="true" tabindex="-1"></a>test_eq(<span class="cf">await</span> kc.eval_expr(<span class="st">'a[-1] * 2'</span>), <span class="dv">6</span>)</span>
+<span id="cb57-2"><a href="#cb57-2" aria-hidden="true" tabindex="-1"></a><span class="cf">with</span> ExceptionExpected(EvalError, <span class="st">'NameError'</span>): <span class="cf">await</span> kc.eval_expr(<span class="st">'no_such_name'</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<p>The <code>_ipy_funcs</code> services live kernel-side in <a href="https://github.com/AnswerDotAI/ipyfuncs"><code>ipyfuncs</code></a>; importing it is the whole setup, so the battery is self-sufficient:</p>
+<div id="d5bea609" class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb58"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb58-1"><a href="#cb58-1" aria-hidden="true" tabindex="-1"></a><span class="cf">await</span> kc.reply(<span class="st">'import ipyfuncs'</span>)</span>
+<span id="cb58-2"><a href="#cb58-2" aria-hidden="true" tabindex="-1"></a><span class="cf">await</span> kc.reply(<span class="st">'''def range_ex(</span></span>
+<span id="cb58-3"><a href="#cb58-3" aria-hidden="true" tabindex="-1"></a><span class="st">    a:str  # some param</span></span>
+<span id="cb58-4"><a href="#cb58-4" aria-hidden="true" tabindex="-1"></a><span class="st">):</span></span>
+<span id="cb58-5"><a href="#cb58-5" aria-hidden="true" tabindex="-1"></a><span class="st">    "some func docstring"</span></span>
+<span id="cb58-6"><a href="#cb58-6" aria-hidden="true" tabindex="-1"></a><span class="st">    ...'''</span>)</span>
+<span id="cb58-7"><a href="#cb58-7" aria-hidden="true" tabindex="-1"></a>sigs <span class="op">=</span> <span class="cf">await</span> kc.sig_help(code<span class="op">=</span><span class="st">'range_ex('</span>, line_no<span class="op">=</span><span class="dv">1</span>, col_no<span class="op">=</span><span class="dv">9</span>)</span>
+<span id="cb58-8"><a href="#cb58-8" aria-hidden="true" tabindex="-1"></a>test_eq(sigs[<span class="dv">0</span>][<span class="st">'label'</span>], <span class="st">'range_ex'</span>)</span>
+<span id="cb58-9"><a href="#cb58-9" aria-hidden="true" tabindex="-1"></a>schemas <span class="op">=</span> <span class="cf">await</span> kc.get_schemas(fs<span class="op">=</span>[<span class="st">'range_ex'</span>])</span>
+<span id="cb58-10"><a href="#cb58-10" aria-hidden="true" tabindex="-1"></a>test_eq(schemas[<span class="st">'range_ex'</span>][<span class="st">'function'</span>][<span class="st">'name'</span>], <span class="st">'range_ex'</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<p><code>xpush</code>, <code>retr</code>, and <code>eval_exprs</code> round-trip values through the serial sidecar; <code>xenv</code> remains a main-shell fire-and-forget environment setter:</p>
+<div id="1fdd0818" class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb59"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb59-1"><a href="#cb59-1" aria-hidden="true" tabindex="-1"></a>kc.xpush(asdf<span class="op">=</span><span class="dv">4</span>)</span>
+<span id="cb59-2"><a href="#cb59-2" aria-hidden="true" tabindex="-1"></a>test_eq(<span class="cf">await</span> kc.retr(<span class="st">'asdf'</span>), <span class="dv">4</span>)</span>
+<span id="cb59-3"><a href="#cb59-3" aria-hidden="true" tabindex="-1"></a>test_eq(<span class="cf">await</span> kc.eval_exprs(vs<span class="op">=</span>[<span class="st">'list(range(5))'</span>]), {<span class="st">'list(range(5))'</span>: [<span class="dv">0</span>,<span class="dv">1</span>,<span class="dv">2</span>,<span class="dv">3</span>,<span class="dv">4</span>]})</span>
+<span id="cb59-4"><a href="#cb59-4" aria-hidden="true" tabindex="-1"></a>kc.xenv(hi<span class="op">=</span><span class="st">'jupy'</span>)</span>
+<span id="cb59-5"><a href="#cb59-5" aria-hidden="true" tabindex="-1"></a>test_eq(<span class="cf">await</span> kc.<span class="bu">eval</span>(<span class="st">'__os.environ["hi"]'</span>, call_<span class="op">=</span><span class="va">False</span>), <span class="st">'jupy'</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+</section>
+<section id="streaming-an-execution-run" class="level3">
+<h3 class="anchored" data-anchor-id="streaming-an-execution-run">Streaming an execution: <code>run</code></h3>
+<p><code>execute</code> returns when the request is sent, and <code>reply</code> returns one message; iopub arrives independently, any time, interleaved with every other client’s traffic. A REPL-shaped consumer wants “<em>this</em> execution’s messages, in order, until it finishes”. <code>run</code> (from <code>RouterOps</code>, shared with <code>conkernelclient</code>) owns that view. It files its entry and sends at call time, like <code>reply</code>, and returns an async generator yielding every message parented to the execute - outputs, statuses, the <code>execute_reply</code> - ending when both the <code>execute_reply</code> and the idle status have arrived. <code>exec_outs</code> is the listified, rendered form: just the nbformat outputs, via <code>msg2out</code>. <code>on_stdin</code> handles this run’s prompts; without it, the execute disallows stdin rather than risking an unattended wait. Concurrent runs each collect only their own traffic, and a dead kernel raises <code>DeadKernelError</code> in every waiting run.</p>
+<p>The stream, and its rendered, listified form:</p>
+<div id="cf58a442" class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb60"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb60-1"><a href="#cb60-1" aria-hidden="true" tabindex="-1"></a>types <span class="op">=</span> [m[<span class="st">'msg_type'</span>] <span class="cf">async</span> <span class="cf">for</span> m <span class="kw">in</span> kc.run(<span class="st">"print('hi'); 6*7"</span>)]</span>
+<span id="cb60-2"><a href="#cb60-2" aria-hidden="true" tabindex="-1"></a>test_eq([t <span class="cf">for</span> t <span class="kw">in</span> types <span class="cf">if</span> t <span class="kw">in</span> OUTPUT_MSGS], [<span class="st">'stream'</span>, <span class="st">'execute_result'</span>])</span>
+<span id="cb60-3"><a href="#cb60-3" aria-hidden="true" tabindex="-1"></a>outs <span class="op">=</span> <span class="cf">await</span> kc.exec_outs(<span class="st">"print('hi'); 6*7"</span>)</span>
+<span id="cb60-4"><a href="#cb60-4" aria-hidden="true" tabindex="-1"></a>test_eq([o[<span class="st">'output_type'</span>] <span class="cf">for</span> o <span class="kw">in</span> outs], [<span class="st">'stream'</span>, <span class="st">'execute_result'</span>])</span>
+<span id="cb60-5"><a href="#cb60-5" aria-hidden="true" tabindex="-1"></a>outs</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<p>Streaming is just iterating: each message is yielded as it arrives, so a live renderer (clikernel’s stream worker is one) awaits inside its own loop body. A consumer that stops early closes the generator; that pops the entry, and the rest of the execution’s traffic flows to <code>on_jmsg</code> like any other unmatched message:</p>
+<div id="c66e34cb" class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb61"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb61-1"><a href="#cb61-1" aria-hidden="true" tabindex="-1"></a>gen <span class="op">=</span> kc.run(<span class="st">"print('early'); 6*7"</span>)</span>
+<span id="cb61-2"><a href="#cb61-2" aria-hidden="true" tabindex="-1"></a>test_eq((<span class="cf">await</span> <span class="bu">anext</span>(gen))[<span class="st">'msg_type'</span>], <span class="st">'status'</span>)</span>
+<span id="cb61-3"><a href="#cb61-3" aria-hidden="true" tabindex="-1"></a><span class="cf">await</span> gen.aclose()</span>
+<span id="cb61-4"><a href="#cb61-4" aria-hidden="true" tabindex="-1"></a>test_eq(kc.runs, {})</span>
+<span id="cb61-5"><a href="#cb61-5" aria-hidden="true" tabindex="-1"></a>s <span class="op">=</span> <span class="cf">await</span> qs.jmsg_for(<span class="st">'stream'</span>, timeout<span class="op">=</span><span class="dv">15</span>)</span>
+<span id="cb61-6"><a href="#cb61-6" aria-hidden="true" tabindex="-1"></a>s[<span class="st">'content'</span>][<span class="st">'text'</span>]</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<p>An error is an ordinary <code>error</code> output plus the reply’s verdict, so a consumer chooses its own severity:</p>
+<div id="0a65ab9d" class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb62"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb62-1"><a href="#cb62-1" aria-hidden="true" tabindex="-1"></a>msgs <span class="op">=</span> [m <span class="cf">async</span> <span class="cf">for</span> m <span class="kw">in</span> kc.run(<span class="st">'1/0'</span>)]</span>
+<span id="cb62-2"><a href="#cb62-2" aria-hidden="true" tabindex="-1"></a>rep <span class="op">=</span> <span class="bu">next</span>(m <span class="cf">for</span> m <span class="kw">in</span> msgs <span class="cf">if</span> m[<span class="st">'msg_type'</span>] <span class="op">==</span> <span class="st">'execute_reply'</span>)</span>
+<span id="cb62-3"><a href="#cb62-3" aria-hidden="true" tabindex="-1"></a>test_eq(rep[<span class="st">'content'</span>][<span class="st">'status'</span>], <span class="st">'error'</span>)</span>
+<span id="cb62-4"><a href="#cb62-4" aria-hidden="true" tabindex="-1"></a>outs <span class="op">=</span> [msg2out(m) <span class="cf">for</span> m <span class="kw">in</span> msgs <span class="cf">if</span> m[<span class="st">'msg_type'</span>] <span class="kw">in</span> OUTPUT_MSGS]</span>
+<span id="cb62-5"><a href="#cb62-5" aria-hidden="true" tabindex="-1"></a>test_eq(outs[<span class="dv">0</span>][<span class="st">'ename'</span>], <span class="st">'ZeroDivisionError'</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<p><code>on_stdin</code> scopes prompt handling to one run and enables stdin on its execute. The callback receives the complete <code>input_request</code> and returns its answer. jupywire accepts synchronous or asynchronous callbacks and sends the correctly parented <code>input_reply</code>:</p>
+<div id="da3a7a6f" class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb63"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb63-1"><a href="#cb63-1" aria-hidden="true" tabindex="-1"></a>run_prompts <span class="op">=</span> []</span>
+<span id="cb63-2"><a href="#cb63-2" aria-hidden="true" tabindex="-1"></a><span class="cf">async</span> <span class="kw">def</span> answer_stdin(msg):</span>
+<span id="cb63-3"><a href="#cb63-3" aria-hidden="true" tabindex="-1"></a>    run_prompts.append(msg)</span>
+<span id="cb63-4"><a href="#cb63-4" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> <span class="st">'jupy'</span></span>
+<span id="cb63-5"><a href="#cb63-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb63-6"><a href="#cb63-6" aria-hidden="true" tabindex="-1"></a><span class="cf">async</span> <span class="cf">for</span> _ <span class="kw">in</span> kc.run(<span class="st">"nm = input('who? ')"</span>, on_stdin<span class="op">=</span>answer_stdin): <span class="cf">pass</span></span>
+<span id="cb63-7"><a href="#cb63-7" aria-hidden="true" tabindex="-1"></a>name <span class="op">=</span> <span class="cf">await</span> kc.retr(<span class="st">'nm'</span>)</span>
+<span id="cb63-8"><a href="#cb63-8" aria-hidden="true" tabindex="-1"></a>test_eq(name, <span class="st">'jupy'</span>)</span>
+<span id="cb63-9"><a href="#cb63-9" aria-hidden="true" tabindex="-1"></a><span class="bu">dict</span>(prompt<span class="op">=</span>run_prompts[<span class="dv">0</span>][<span class="st">'content'</span>][<span class="st">'prompt'</span>], name<span class="op">=</span>name)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<p>Comm traffic a cell produces is parented to its execute like any other message, so a <code>run</code> collects it; <code>COMM_MSGS</code> names the three types, and none of them is an output. Comms are how a kernel-side magic talks to its host app (e.g.&nbsp;ipyai’s <code>%ipyai</code>). Comm traffic parented to nothing this client is running goes to <code>on_jmsg</code> for the host:</p>
+<div id="55a203ee" class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb64"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb64-1"><a href="#cb64-1" aria-hidden="true" tabindex="-1"></a>msgs <span class="op">=</span> [m <span class="cf">async</span> <span class="cf">for</span> m <span class="kw">in</span> kc.run(<span class="st">"from comm import create_comm</span><span class="ch">\n</span><span class="st">cm = create_comm('demo', data=dict(x=1))</span><span class="ch">\n</span><span class="st">cm.send(dict(y=2))"</span>)]</span>
+<span id="cb64-2"><a href="#cb64-2" aria-hidden="true" tabindex="-1"></a>comms <span class="op">=</span> [(m[<span class="st">'msg_type'</span>], m[<span class="st">'content'</span>].get(<span class="st">'data'</span>)) <span class="cf">for</span> m <span class="kw">in</span> msgs <span class="cf">if</span> m[<span class="st">'msg_type'</span>] <span class="kw">in</span> COMM_MSGS]</span>
+<span id="cb64-3"><a href="#cb64-3" aria-hidden="true" tabindex="-1"></a>test_eq(comms[<span class="dv">0</span>], (<span class="st">'comm_open'</span>, <span class="bu">dict</span>(x<span class="op">=</span><span class="dv">1</span>)))</span>
+<span id="cb64-4"><a href="#cb64-4" aria-hidden="true" tabindex="-1"></a>test_eq(comms[<span class="dv">1</span>], (<span class="st">'comm_msg'</span>, <span class="bu">dict</span>(y<span class="op">=</span><span class="dv">2</span>)))</span>
+<span id="cb64-5"><a href="#cb64-5" aria-hidden="true" tabindex="-1"></a>test_eq([m <span class="cf">for</span> m <span class="kw">in</span> msgs <span class="cf">if</span> m[<span class="st">'msg_type'</span>] <span class="kw">in</span> OUTPUT_MSGS], [])</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<p>The filtering contract, live: iopub is a shared broadcast, so an out-of-band execute (a host’s silent bridge exec, another client) broadcasts its own outputs and its own <code>idle</code> while a run is collecting. Neither may leak in: a foreign output must not appear in the run, and a foreign idle must not end it early. The foreign traffic goes to <code>on_jmsg</code> instead:</p>
+<div id="54276565" class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb65"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb65-1"><a href="#cb65-1" aria-hidden="true" tabindex="-1"></a>foreign_id <span class="op">=</span> kc.execute(<span class="st">"'FOREIGN'"</span>)</span>
+<span id="cb65-2"><a href="#cb65-2" aria-hidden="true" tabindex="-1"></a>outs <span class="op">=</span> <span class="cf">await</span> kc.exec_outs(<span class="st">"'MINE'"</span>)</span>
+<span id="cb65-3"><a href="#cb65-3" aria-hidden="true" tabindex="-1"></a>test_eq(<span class="bu">len</span>(outs), <span class="dv">1</span>)</span>
+<span id="cb65-4"><a href="#cb65-4" aria-hidden="true" tabindex="-1"></a><span class="cf">assert</span> <span class="st">'MINE'</span> <span class="kw">in</span> outs[<span class="dv">0</span>][<span class="st">'data'</span>][<span class="st">'text/plain'</span>] <span class="kw">and</span> <span class="st">'FOREIGN'</span> <span class="kw">not</span> <span class="kw">in</span> <span class="bu">str</span>(outs)</span>
+<span id="cb65-5"><a href="#cb65-5" aria-hidden="true" tabindex="-1"></a>foreign <span class="op">=</span> <span class="cf">await</span> qs.jmsg_for(<span class="st">'execute_result'</span>, pred<span class="op">=</span><span class="kw">lambda</span> m: m[<span class="st">'parent_header'</span>][<span class="st">'msg_id'</span>]<span class="op">==</span>foreign_id, timeout<span class="op">=</span><span class="dv">15</span>)</span>
+<span id="cb65-6"><a href="#cb65-6" aria-hidden="true" tabindex="-1"></a><span class="cf">assert</span> <span class="st">'FOREIGN'</span> <span class="kw">in</span> <span class="bu">str</span>(foreign[<span class="st">'content'</span>])</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<p>Runs are concurrency-safe: each files its entry before sending, so several in flight on one client each collect only their own traffic, however the kernel’s queue interleaves it (gathered with a bound, so a routing regression fails instead of hanging):</p>
+<div id="c98bf5c1" class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb66"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb66-1"><a href="#cb66-1" aria-hidden="true" tabindex="-1"></a>outs <span class="op">=</span> <span class="cf">await</span> asyncio.wait_for(asyncio.gather(kc.exec_outs(<span class="st">'1+1'</span>), kc.exec_outs(<span class="st">"print('two')"</span>), kc.exec_outs(<span class="st">'3+3'</span>)), <span class="dv">30</span>)</span>
+<span id="cb66-2"><a href="#cb66-2" aria-hidden="true" tabindex="-1"></a>test_eq([o[<span class="dv">0</span>][<span class="st">'data'</span>][<span class="st">'text/plain'</span>] <span class="cf">for</span> o <span class="kw">in</span> (outs[<span class="dv">0</span>], outs[<span class="dv">2</span>])], [<span class="st">'2'</span>, <span class="st">'6'</span>])</span>
+<span id="cb66-3"><a href="#cb66-3" aria-hidden="true" tabindex="-1"></a>test_eq(outs[<span class="dv">1</span>][<span class="dv">0</span>][<span class="st">'text'</span>], <span class="st">'two</span><span class="ch">\n</span><span class="st">'</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<p>Concurrent submission means the kernel queues the cells, and with the wire default <code>stop_on_error=True</code> an error in one aborts the runs queued behind it (status <code>aborted</code>). Independent runs pass <code>stop_on_error=False</code>:</p>
+<div id="f1f5b79b" class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb67"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb67-1"><a href="#cb67-1" aria-hidden="true" tabindex="-1"></a>o1, o2, o3 <span class="op">=</span> <span class="cf">await</span> asyncio.wait_for(asyncio.gather(<span class="op">*</span>[kc.exec_outs(c, stop_on_error<span class="op">=</span><span class="va">False</span>) <span class="cf">for</span> c <span class="kw">in</span> (<span class="st">'y = 6*7'</span>, <span class="st">'1/0'</span>, <span class="st">'y'</span>)]), <span class="dv">30</span>)</span>
+<span id="cb67-2"><a href="#cb67-2" aria-hidden="true" tabindex="-1"></a>test_eq((o1, o2[<span class="dv">0</span>][<span class="st">'ename'</span>], o3[<span class="dv">0</span>][<span class="st">'data'</span>][<span class="st">'text/plain'</span>]), ([], <span class="st">'ZeroDivisionError'</span>, <span class="st">'42'</span>))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+</section>
+</section>
+<section id="protocol-details" class="level2">
+<h2 class="anchored" data-anchor-id="protocol-details">Protocol details</h2>
+<p>Lessons that apply to any client of these kernels: payload replies, display metadata and transients, display-id updates, and what an interrupt produces.</p>
+<p>Payloads are used to add dicts directly into the message reply. The <code>source</code> key says what kind of payload it is. There are some officially recognised sources, like <code>page</code> to show stuff in a pager, of <code>set_next_input</code> to add a new cell under the current one.</p>
+<p>For instance, this is extended by the aimagic nbextension to add <code>ctype</code> and <code>offset</code> keys:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb68"><pre class="sourceCode py code-with-copy"><code class="sourceCode python"><span id="cb68-1"><a href="#cb68-1" aria-hidden="true" tabindex="-1"></a>pm <span class="op">=</span> get_ipython().payload_manager</span>
+<span id="cb68-2"><a href="#cb68-2" aria-hidden="true" tabindex="-1"></a>pm.write_payload(<span class="bu">dict</span>(</span>
+<span id="cb68-3"><a href="#cb68-3" aria-hidden="true" tabindex="-1"></a>    source<span class="op">=</span><span class="st">'set_next_input'</span>, text<span class="op">=</span><span class="st">'bar'</span>,</span>
+<span id="cb68-4"><a href="#cb68-4" aria-hidden="true" tabindex="-1"></a>    ctype<span class="op">=</span><span class="st">'markdown'</span>, replace<span class="op">=</span><span class="va">False</span>, offset<span class="op">=</span><span class="dv">1</span>))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>We can invent any source we like, and that will be included in the message. With <code>single=False</code> we can accumulate multiple messages:</p>
+<div id="59f1627d" class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb69"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb69-1"><a href="#cb69-1" aria-hidden="true" tabindex="-1"></a>code <span class="op">=</span> <span class="st">'''payl = dict(source='testing', foo='bar')</span></span>
+<span id="cb69-2"><a href="#cb69-2" aria-hidden="true" tabindex="-1"></a><span class="st">pm = get_ipython().payload_manager</span></span>
+<span id="cb69-3"><a href="#cb69-3" aria-hidden="true" tabindex="-1"></a><span class="st">pm.write_payload(payl, single=False)</span></span>
+<span id="cb69-4"><a href="#cb69-4" aria-hidden="true" tabindex="-1"></a><span class="st">pm.write_payload(dict(source='testing', foo='baz'), single=False)'''</span></span>
+<span id="cb69-5"><a href="#cb69-5" aria-hidden="true" tabindex="-1"></a>r <span class="op">=</span> <span class="cf">await</span> kc.reply(code, timeout<span class="op">=</span><span class="dv">30</span>)</span>
+<span id="cb69-6"><a href="#cb69-6" aria-hidden="true" tabindex="-1"></a>test_eq([p[<span class="st">'foo'</span>] <span class="cf">for</span> p <span class="kw">in</span> r[<span class="st">'content'</span>][<span class="st">'payload'</span>]], [<span class="st">'bar'</span>,<span class="st">'baz'</span>])</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<p>We can add metadata and “transient”s (data that should not be persisted in a notebook) to display objects by adding params to <code>display</code>:</p>
+<div id="294369a0" class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb70"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb70-1"><a href="#cb70-1" aria-hidden="true" tabindex="-1"></a>kc.execute(<span class="st">"from IPython.display import display</span><span class="ch">\n</span><span class="st">display('hi', metadata={'key':'value'}, transient={'foo':'bar'})"</span>)</span>
+<span id="cb70-2"><a href="#cb70-2" aria-hidden="true" tabindex="-1"></a>dd <span class="op">=</span> <span class="cf">await</span> qs.jmsg_for(<span class="st">'display_data'</span>, timeout<span class="op">=</span><span class="dv">15</span>)</span>
+<span id="cb70-3"><a href="#cb70-3" aria-hidden="true" tabindex="-1"></a>test_eq(dd[<span class="st">'content'</span>][<span class="st">'metadata'</span>], {<span class="st">'key'</span>:<span class="st">'value'</span>})</span>
+<span id="cb70-4"><a href="#cb70-4" aria-hidden="true" tabindex="-1"></a>test_eq(dd[<span class="st">'content'</span>][<span class="st">'transient'</span>], {<span class="st">'foo'</span>:<span class="st">'bar'</span>})</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<p>A display with a <code>display_id</code> can be updated later: the follow-up arrives as <code>update_display_data</code> carrying the same id in its <code>transient</code>, and a client that tracks ids replaces the earlier output instead of appending:</p>
+<div id="daa24899" class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb71"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb71-1"><a href="#cb71-1" aria-hidden="true" tabindex="-1"></a>code <span class="op">=</span> <span class="st">'''from IPython.display import display</span></span>
+<span id="cb71-2"><a href="#cb71-2" aria-hidden="true" tabindex="-1"></a><span class="st">display('first', display_id='qqww')</span></span>
+<span id="cb71-3"><a href="#cb71-3" aria-hidden="true" tabindex="-1"></a><span class="st">display('second', update=True, display_id='qqww')'''</span></span>
+<span id="cb71-4"><a href="#cb71-4" aria-hidden="true" tabindex="-1"></a>kc.execute(code)</span>
+<span id="cb71-5"><a href="#cb71-5" aria-hidden="true" tabindex="-1"></a>upd <span class="op">=</span> <span class="cf">await</span> qs.jmsg_for(<span class="st">'update_display_data'</span>, timeout<span class="op">=</span><span class="dv">15</span>)</span>
+<span id="cb71-6"><a href="#cb71-6" aria-hidden="true" tabindex="-1"></a>test_eq(upd[<span class="st">'content'</span>][<span class="st">'transient'</span>], {<span class="st">'display_id'</span>:<span class="st">'qqww'</span>})</span>
+<span id="cb71-7"><a href="#cb71-7" aria-hidden="true" tabindex="-1"></a>test_eq(upd[<span class="st">'content'</span>][<span class="st">'data'</span>][<span class="st">'text/plain'</span>], <span class="st">"'second'"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<p>An interrupt (<code>interrupt_request</code> on the control channel, or the HTTP <code>interrupt</code> endpoint) reaches the running cell as an ordinary <code>error</code> output, <code>KeyboardInterrupt</code>:</p>
+<div id="7a34bcce" class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb72"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb72-1"><a href="#cb72-1" aria-hidden="true" tabindex="-1"></a>task <span class="op">=</span> asyncio.ensure_future(kc.exec_outs(<span class="st">"import time; time.sleep(10); print('finished')"</span>))</span>
+<span id="cb72-2"><a href="#cb72-2" aria-hidden="true" tabindex="-1"></a><span class="cf">await</span> asyncio.sleep(<span class="fl">0.3</span>)</span>
+<span id="cb72-3"><a href="#cb72-3" aria-hidden="true" tabindex="-1"></a><span class="cf">await</span> kc.interrupt_kernel()</span>
+<span id="cb72-4"><a href="#cb72-4" aria-hidden="true" tabindex="-1"></a>outs <span class="op">=</span> <span class="cf">await</span> task</span>
+<span id="cb72-5"><a href="#cb72-5" aria-hidden="true" tabindex="-1"></a>test_eq(outs[<span class="dv">0</span>][<span class="st">'ename'</span>], <span class="st">'KeyboardInterrupt'</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<section id="reconnecting" class="level3">
+<h3 class="anchored" data-anchor-id="reconnecting">Reconnecting</h3>
+<p>Over zmq a dropped connection is invisible: the transport redials by itself and jupyter_client never knows. A websocket client has to earn that property. When the receive loop ends without <code>aclose</code> having been called, the client redials <code>/channels</code> with the same <code>session_id</code>, which is what lets a gateway hand back the surviving queue and replay what was missed (see the gateway’s reconnect contract); the send loop resumes behind it, and a frame that died mid-send is resent first. Pending <code>reply()</code> futures deliberately survive the drop: the gateway replays the very replies they await, so failing them would be premature.</p>
+<p>Giving up is a separate decision from retrying. Each failed redial probes the kernel over HTTP: if the server answers and the kernel is gone, retrying would be a lie, so pending futures fail immediately with <code>DeadKernelError</code>. If the server itself is unreachable, the client retries with backoff until <code>reconnect_ceiling</code> seconds have passed, then fails them with <code>ConnectionError</code>. <code>reconnect=False</code> restores fail-fast behavior.</p>
+<div id="9d2cd509" class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb73"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb73-1"><a href="#cb73-1" aria-hidden="true" tabindex="-1"></a>fut <span class="op">=</span> asyncio.ensure_future(kc.reply(<span class="st">"import time; time.sleep(1); 'survived'"</span>, timeout<span class="op">=</span><span class="dv">20</span>))</span>
+<span id="cb73-2"><a href="#cb73-2" aria-hidden="true" tabindex="-1"></a><span class="cf">await</span> asyncio.sleep(<span class="fl">0.3</span>)</span>
+<span id="cb73-3"><a href="#cb73-3" aria-hidden="true" tabindex="-1"></a>kc._ws.transport.abort()</span>
+<span id="cb73-4"><a href="#cb73-4" aria-hidden="true" tabindex="-1"></a>rep <span class="op">=</span> <span class="cf">await</span> fut</span>
+<span id="cb73-5"><a href="#cb73-5" aria-hidden="true" tabindex="-1"></a>test_eq(rep[<span class="st">'content'</span>][<span class="st">'status'</span>], <span class="st">'ok'</span>)</span>
+<span id="cb73-6"><a href="#cb73-6" aria-hidden="true" tabindex="-1"></a>test_eq((<span class="cf">await</span> kc.reply(<span class="st">'1+1'</span>, timeout<span class="op">=</span><span class="dv">15</span>))[<span class="st">'content'</span>][<span class="st">'status'</span>], <span class="st">'ok'</span>)</span>
+<span id="cb73-7"><a href="#cb73-7" aria-hidden="true" tabindex="-1"></a>kc.channels_running</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<p>A <code>run()</code> in flight survives the drop the same way: its entry keeps collecting, and the gateway replays the messages the dead socket lost:</p>
+<div id="ee162de7" class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb74"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb74-1"><a href="#cb74-1" aria-hidden="true" tabindex="-1"></a>gen <span class="op">=</span> kc.run(<span class="st">"import time; time.sleep(1); 'collected'"</span>, timeout<span class="op">=</span><span class="dv">30</span>)</span>
+<span id="cb74-2"><a href="#cb74-2" aria-hidden="true" tabindex="-1"></a><span class="cf">await</span> asyncio.sleep(<span class="fl">0.3</span>)</span>
+<span id="cb74-3"><a href="#cb74-3" aria-hidden="true" tabindex="-1"></a>kc._ws.transport.abort()</span>
+<span id="cb74-4"><a href="#cb74-4" aria-hidden="true" tabindex="-1"></a>msgs <span class="op">=</span> [m <span class="cf">async</span> <span class="cf">for</span> m <span class="kw">in</span> gen]</span>
+<span id="cb74-5"><a href="#cb74-5" aria-hidden="true" tabindex="-1"></a>test_eq(<span class="bu">next</span>(m[<span class="st">'content'</span>][<span class="st">'status'</span>] <span class="cf">for</span> m <span class="kw">in</span> msgs <span class="cf">if</span> m[<span class="st">'msg_type'</span>] <span class="op">==</span> <span class="st">'execute_reply'</span>), <span class="st">'ok'</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<p>Kernel death arrives as rustygate’s synthesized <code>status</code> message with <code>content.execution_state</code> <code>dead</code>, the only death broadcast a websocket client gets. It fails every pending <code>reply()</code> and <code>run()</code> with <code>DeadKernelError</code> and then reaches <code>on_jmsg</code>. The reconnect probe reaches the same verdict when the websocket drops first. A kernel whose process dies mid-cell never replies:</p>
+<div id="65d13c42" class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb75"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb75-1"><a href="#cb75-1" aria-hidden="true" tabindex="-1"></a>d <span class="op">=</span> JupyAsyncKernelClient(base_url)</span>
+<span id="cb75-2"><a href="#cb75-2" aria-hidden="true" tabindex="-1"></a><span class="cf">await</span> d.start_kernel()</span>
+<span id="cb75-3"><a href="#cb75-3" aria-hidden="true" tabindex="-1"></a>d.start_channels()</span>
+<span id="cb75-4"><a href="#cb75-4" aria-hidden="true" tabindex="-1"></a><span class="cf">await</span> d.wait_for_ready(timeout<span class="op">=</span><span class="dv">60</span>)</span>
+<span id="cb75-5"><a href="#cb75-5" aria-hidden="true" tabindex="-1"></a>w <span class="op">=</span> d.reply(<span class="st">'import os, signal; os.kill(os.getpid(), signal.SIGKILL)'</span>, timeout<span class="op">=</span><span class="dv">30</span>)</span>
+<span id="cb75-6"><a href="#cb75-6" aria-hidden="true" tabindex="-1"></a><span class="cf">with</span> ExceptionExpected(DeadKernelError): <span class="cf">await</span> w</span>
+<span id="cb75-7"><a href="#cb75-7" aria-hidden="true" tabindex="-1"></a><span class="cf">await</span> d.aclose()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<p>Messages have a size ceiling, <code>max_size</code> (default 256MB, <code>None</code> to disable), passed to the websocket library; the library closes the connection when a message exceeds it.</p>
+</section>
+<section id="closing-down" class="level3">
+<h3 class="anchored" data-anchor-id="closing-down">Closing down</h3>
+<p><code>shutdown</code> goes over the control channel; the HTTP <code>DELETE</code> (via <code>shutdown_kernel</code>) is the more common route since it also reaps the server-side process.</p>
+<div id="c0eb50da" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-09-06T07:05:56.187645+00:00&quot;,&quot;shell.execute_reply&quot;:&quot;2026-09-06T07:05:56.190142+00:00&quot;,&quot;total&quot;:0.002498563999978387}}" data-execution_count="49">
+<hr>
+<p><a href="https://github.com/AnswerDotAI/jupyasyncclient/blob/main/jupyasyncclient/core.py#L307" target="_blank" style="float:right; font-size:smaller">source</a></p>
+<section id="jupyasynckernelclient.shutdown" class="level3">
+<h3 class="anchored" data-anchor-id="jupyasynckernelclient.shutdown">JupyAsyncKernelClient.shutdown</h3>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb76"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb76-1"><a href="#cb76-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> shutdown(</span>
+<span id="cb76-2"><a href="#cb76-2" aria-hidden="true" tabindex="-1"></a>    restart:<span class="bu">bool</span><span class="op">=</span><span class="va">False</span>, timeout:NoneType<span class="op">=</span><span class="va">None</span></span>
+<span id="cb76-3"><a href="#cb76-3" aria-hidden="true" tabindex="-1"></a>):</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p><em>Call self as a function.</em></p>
+</section>
+</div>
+<p><code>aclose</code> flushes queued outbound frames before tearing down, bounded at 2s. A fire-and-forget request followed by an immediate close still sends. <code>shutdown_kernel</code> deletes the kernel and then closes this client itself, since with the kernel gone the connection has nothing left to serve. The common full teardown is the one call:</p>
+<p>The parked queue survives a full disconnect too. A client that goes away entirely and later redials with the same <code>session_id</code> receives everything the kernel produced in between. Readiness must not eat the replay, and the reader attaches its <code>JmsgQueues</code> before connecting, so no replayed frame is dropped:</p>
+<div id="1274995d" class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb77"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb77-1"><a href="#cb77-1" aria-hidden="true" tabindex="-1"></a>a <span class="op">=</span> JupyAsyncKernelClient(base_url, session_id<span class="op">=</span><span class="st">'parked-demo'</span>)</span>
+<span id="cb77-2"><a href="#cb77-2" aria-hidden="true" tabindex="-1"></a><span class="cf">await</span> a.start_kernel()</span>
+<span id="cb77-3"><a href="#cb77-3" aria-hidden="true" tabindex="-1"></a>a.start_channels()</span>
+<span id="cb77-4"><a href="#cb77-4" aria-hidden="true" tabindex="-1"></a><span class="cf">await</span> a.wait_for_ready(timeout<span class="op">=</span><span class="dv">60</span>)</span>
+<span id="cb77-5"><a href="#cb77-5" aria-hidden="true" tabindex="-1"></a>a.execute(<span class="st">"import time; time.sleep(0.5); print('parked')"</span>)</span>
+<span id="cb77-6"><a href="#cb77-6" aria-hidden="true" tabindex="-1"></a><span class="cf">await</span> a.aclose()</span>
+<span id="cb77-7"><a href="#cb77-7" aria-hidden="true" tabindex="-1"></a><span class="cf">await</span> asyncio.sleep(<span class="dv">1</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<p>Reconnect with the same <code>session_id</code> and read what was missed:</p>
+<div id="ac5b5772" class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb78"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb78-1"><a href="#cb78-1" aria-hidden="true" tabindex="-1"></a>b <span class="op">=</span> JupyAsyncKernelClient(base_url, session_id<span class="op">=</span><span class="st">'parked-demo'</span>)</span>
+<span id="cb78-2"><a href="#cb78-2" aria-hidden="true" tabindex="-1"></a>b.kernel_id <span class="op">=</span> a.kernel_id</span>
+<span id="cb78-3"><a href="#cb78-3" aria-hidden="true" tabindex="-1"></a>bq <span class="op">=</span> JmsgQueues(b, queues<span class="op">=</span>(<span class="st">'jmsg'</span>,), merge<span class="op">=</span><span class="bu">dict</span>(iopub<span class="op">=</span><span class="st">'jmsg'</span>))</span>
+<span id="cb78-4"><a href="#cb78-4" aria-hidden="true" tabindex="-1"></a>b.start_channels()</span>
+<span id="cb78-5"><a href="#cb78-5" aria-hidden="true" tabindex="-1"></a><span class="cf">await</span> b.wait_for_ready(timeout<span class="op">=</span><span class="dv">60</span>)</span>
+<span id="cb78-6"><a href="#cb78-6" aria-hidden="true" tabindex="-1"></a>m <span class="op">=</span> <span class="cf">await</span> bq.jmsg_for(<span class="st">'stream'</span>, timeout<span class="op">=</span><span class="dv">15</span>)</span>
+<span id="cb78-7"><a href="#cb78-7" aria-hidden="true" tabindex="-1"></a>test_eq(m[<span class="st">'content'</span>][<span class="st">'text'</span>], <span class="st">'parked</span><span class="ch">\n</span><span class="st">'</span>)</span>
+<span id="cb78-8"><a href="#cb78-8" aria-hidden="true" tabindex="-1"></a><span class="cf">await</span> b.shutdown_kernel()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+</section>
+<section id="the-packaged-startup" class="level3">
+<h3 class="anchored" data-anchor-id="the-packaged-startup">The packaged startup</h3>
+<p>Construct, create, open channels, wait ready is the four-line dance every consumer types; <code>connect</code> packages it, covering attach with the same verb (<code>kernel=</code> an existing id). Ownership is recorded where it’s decided: a kernel <code>connect</code> <em>created</em> is <code>owned</code>, and the context manager honors that on the way out — the client always closes, but the kernel is shut down only when owned. An attached kernel is never stopped, and bare <code>aclose</code> never kills anything: explicit <code>shutdown_kernel</code> remains the only other way a kernel ends.</p>
+<div id="1bf2e191" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-09-06T07:05:56.192703+00:00&quot;,&quot;shell.execute_reply&quot;:&quot;2026-09-06T07:05:56.195164+00:00&quot;,&quot;total&quot;:0.0024632370000006176}}" data-execution_count="51">
+<hr>
+<p><a href="https://github.com/AnswerDotAI/jupyasyncclient/blob/main/jupyasyncclient/core.py#L326" target="_blank" style="float:right; font-size:smaller">source</a></p>
+<section id="jupyasynckernelclient.__aexit__" class="level3">
+<h3 class="anchored" data-anchor-id="jupyasynckernelclient.__aexit__">JupyAsyncKernelClient.__aexit__</h3>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb79"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb79-1"><a href="#cb79-1" aria-hidden="true" tabindex="-1"></a><span class="cf">async</span> <span class="kw">def</span> <span class="fu">__aexit__</span>(</span>
+<span id="cb79-2"><a href="#cb79-2" aria-hidden="true" tabindex="-1"></a>    <span class="op">*</span>exc</span>
+<span id="cb79-3"><a href="#cb79-3" aria-hidden="true" tabindex="-1"></a>):</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p><em>Call self as a function.</em></p>
+</section>
+</div>
+<div id="315cbce6" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-09-06T07:05:56.195254+00:00&quot;,&quot;shell.execute_reply&quot;:&quot;2026-09-06T07:05:56.197597+00:00&quot;,&quot;total&quot;:0.002345748000010417}}" data-execution_count="52">
+<hr>
+<p><a href="https://github.com/AnswerDotAI/jupyasyncclient/blob/main/jupyasyncclient/core.py#L323" target="_blank" style="float:right; font-size:smaller">source</a></p>
+<section id="jupyasynckernelclient.__aenter__" class="level3">
+<h3 class="anchored" data-anchor-id="jupyasynckernelclient.__aenter__">JupyAsyncKernelClient.__aenter__</h3>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb80"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb80-1"><a href="#cb80-1" aria-hidden="true" tabindex="-1"></a><span class="cf">async</span> <span class="kw">def</span> <span class="fu">__aenter__</span>():</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p><em>Call self as a function.</em></p>
+</section>
+</div>
+<div id="74bc93aa" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-09-06T07:05:56.197706+00:00&quot;,&quot;shell.execute_reply&quot;:&quot;2026-09-06T07:05:56.200593+00:00&quot;,&quot;total&quot;:0.002888830000017606}}" data-execution_count="53">
+<hr>
+<p><a href="https://github.com/AnswerDotAI/jupyasyncclient/blob/main/jupyasyncclient/core.py#L312" target="_blank" style="float:right; font-size:smaller">source</a></p>
+<section id="jupyasynckernelclient.connect" class="level3">
+<h3 class="anchored" data-anchor-id="jupyasynckernelclient.connect">JupyAsyncKernelClient.connect</h3>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb81"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb81-1"><a href="#cb81-1" aria-hidden="true" tabindex="-1"></a><span class="cf">async</span> <span class="kw">def</span> <span class="ex">connect</span>(</span>
+<span id="cb81-2"><a href="#cb81-2" aria-hidden="true" tabindex="-1"></a>    base_url, kernel:NoneType<span class="op">=</span><span class="va">None</span>, token:NoneType<span class="op">=</span><span class="va">None</span>, timeout:<span class="bu">int</span><span class="op">=</span><span class="dv">60</span>, verify:<span class="bu">bool</span><span class="op">=</span><span class="va">True</span>, <span class="op">**</span>kw</span>
+<span id="cb81-3"><a href="#cb81-3" aria-hidden="true" tabindex="-1"></a>):</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p><em>Construct + create a kernel (or attach to <code>kernel</code>) + open channels + wait ready; a created kernel is <code>owned</code></em></p>
+</section>
+</div>
+<div id="622e95cd" class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb82"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb82-1"><a href="#cb82-1" aria-hidden="true" tabindex="-1"></a><span class="cf">async</span> <span class="cf">with</span> <span class="cf">await</span> JupyAsyncKernelClient.<span class="ex">connect</span>(base_url) <span class="im">as</span> k2:</span>
+<span id="cb82-2"><a href="#cb82-2" aria-hidden="true" tabindex="-1"></a>    kid2 <span class="op">=</span> k2.kernel_id</span>
+<span id="cb82-3"><a href="#cb82-3" aria-hidden="true" tabindex="-1"></a>    <span class="cf">assert</span> k2.owned <span class="kw">and</span> k2.channels_running</span>
+<span id="cb82-4"><a href="#cb82-4" aria-hidden="true" tabindex="-1"></a><span class="cf">assert</span> <span class="kw">not</span> <span class="cf">await</span> JupyAsyncKernelClient(base_url, kernel_id<span class="op">=</span>kid2).is_alive()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<p>Attaching with the same verb: <code>kernel=</code> binds an existing id, <code>owned</code> stays False, and leaving the block leaves the kernel running:</p>
+<div id="e3911668" class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb83"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb83-1"><a href="#cb83-1" aria-hidden="true" tabindex="-1"></a><span class="cf">async</span> <span class="cf">with</span> <span class="cf">await</span> JupyAsyncKernelClient.<span class="ex">connect</span>(base_url, kernel<span class="op">=</span>kc.kernel_id) <span class="im">as</span> att: <span class="cf">assert</span> <span class="kw">not</span> att.owned</span>
+<span id="cb83-2"><a href="#cb83-2" aria-hidden="true" tabindex="-1"></a>test_eq(<span class="cf">await</span> kc.is_alive(), <span class="va">True</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+</section>
+<section id="tls" class="level3">
+<h3 class="anchored" data-anchor-id="tls">TLS</h3>
+<p>A gateway started with <code>--tls</code> serves https and wss from a self-signed certificate it generates at boot, and <code>verify=False</code> accepts it: httpx skips certificate checks and the websocket uses an unverified context. This trades server identity for zero provisioning, the right deal for a box you own; token auth works unchanged either way.</p>
+<div id="abebd523" class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb84"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb84-1"><a href="#cb84-1" aria-hidden="true" tabindex="-1"></a>gs <span class="op">=</span> start_gateway(tls<span class="op">=</span><span class="va">True</span>)</span>
+<span id="cb84-2"><a href="#cb84-2" aria-hidden="true" tabindex="-1"></a><span class="cf">assert</span> gs.url.startswith(<span class="st">'https://'</span>)</span>
+<span id="cb84-3"><a href="#cb84-3" aria-hidden="true" tabindex="-1"></a><span class="cf">async</span> <span class="cf">with</span> <span class="cf">await</span> JupyAsyncKernelClient.<span class="ex">connect</span>(gs.url, verify<span class="op">=</span><span class="va">False</span>) <span class="im">as</span> ks: rep <span class="op">=</span> <span class="cf">await</span> ks.reply(<span class="st">'6*7'</span>, timeout<span class="op">=</span><span class="dv">30</span>)</span>
+<span id="cb84-4"><a href="#cb84-4" aria-hidden="true" tabindex="-1"></a>test_eq(rep[<span class="st">'content'</span>][<span class="st">'status'</span>], <span class="st">'ok'</span>)</span>
+<span id="cb84-5"><a href="#cb84-5" aria-hidden="true" tabindex="-1"></a>gs.stop()</span>
+<span id="cb84-6"><a href="#cb84-6" aria-hidden="true" tabindex="-1"></a>gs</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<div id="4187a6a3" class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb85"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb85-1"><a href="#cb85-1" aria-hidden="true" tabindex="-1"></a><span class="cf">await</span> kc.shutdown_kernel()</span>
+<span id="cb85-2"><a href="#cb85-2" aria-hidden="true" tabindex="-1"></a>test_eq(kc.channels_running, <span class="va">False</span>)</span>
+<span id="cb85-3"><a href="#cb85-3" aria-hidden="true" tabindex="-1"></a>test_eq(<span class="cf">await</span> none_kc.is_alive(), <span class="va">False</span>)</span>
+<span id="cb85-4"><a href="#cb85-4" aria-hidden="true" tabindex="-1"></a><span class="cf">await</span> none_kc.aclose()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+
+
+</section>
+</section>
+
+</main> <!-- /main -->
+<script id="quarto-html-after-body" type="application/javascript">
+  window.document.addEventListener("DOMContentLoaded", function (event) {
+    const icon = "";
+    const anchorJS = new window.AnchorJS();
+    anchorJS.options = {
+      placement: 'right',
+      icon: icon
+    };
+    anchorJS.add('.anchored');
+    const isCodeAnnotation = (el) => {
+      for (const clz of el.classList) {
+        if (clz.startsWith('code-annotation-')) {                     
+          return true;
+        }
+      }
+      return false;
+    }
+    const onCopySuccess = function(e) {
+      // button target
+      const button = e.trigger;
+      // don't keep focus
+      button.blur();
+      // flash "checked"
+      button.classList.add('code-copy-button-checked');
+      var currentTitle = button.getAttribute("title");
+      button.setAttribute("title", "Copied!");
+      let tooltip;
+      if (window.bootstrap) {
+        button.setAttribute("data-bs-toggle", "tooltip");
+        button.setAttribute("data-bs-placement", "left");
+        button.setAttribute("data-bs-title", "Copied!");
+        tooltip = new bootstrap.Tooltip(button, 
+          { trigger: "manual", 
+            customClass: "code-copy-button-tooltip",
+            offset: [0, -8]});
+        tooltip.show();    
+      }
+      setTimeout(function() {
+        if (tooltip) {
+          tooltip.hide();
+          button.removeAttribute("data-bs-title");
+          button.removeAttribute("data-bs-toggle");
+          button.removeAttribute("data-bs-placement");
+        }
+        button.setAttribute("title", currentTitle);
+        button.classList.remove('code-copy-button-checked');
+      }, 1000);
+      // clear code selection
+      e.clearSelection();
+    }
+    const getTextToCopy = function(trigger) {
+      const outerScaffold = trigger.parentElement.cloneNode(true);
+      const codeEl = outerScaffold.querySelector('code');
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+    const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+      text: getTextToCopy
+    });
+    clipboard.on('success', onCopySuccess);
+    if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+      const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+        text: getTextToCopy,
+        container: window.document.getElementById('quarto-embedded-source-code-modal')
+      });
+      clipboardModal.on('success', onCopySuccess);
+    }
+      var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+      var mailtoRegex = new RegExp(/^mailto:/);
+        var filterRegex = new RegExp("https:\/\/AnswerDotAI\.github\.io\/jupyasyncclient");
+      var isInternal = (href) => {
+          return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+      }
+      // Inspect non-navigation links and adorn them if external
+     var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+      for (var i=0; i<links.length; i++) {
+        const link = links[i];
+        if (!isInternal(link.href)) {
+          // undo the damage that might have been done by quarto-nav.js in the case of
+          // links that we want to consider external
+          if (link.dataset.originalHref !== undefined) {
+            link.href = link.dataset.originalHref;
+          }
+        }
+      }
+    function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+      const config = {
+        allowHTML: true,
+        maxWidth: 500,
+        delay: 100,
+        arrow: false,
+        appendTo: function(el) {
+            return el.parentElement;
+        },
+        interactive: true,
+        interactiveBorder: 10,
+        theme: 'quarto',
+        placement: 'bottom-start',
+      };
+      if (contentFn) {
+        config.content = contentFn;
+      }
+      if (onTriggerFn) {
+        config.onTrigger = onTriggerFn;
+      }
+      if (onUntriggerFn) {
+        config.onUntrigger = onUntriggerFn;
+      }
+      window.tippy(el, config); 
+    }
+    const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+    for (var i=0; i<noterefs.length; i++) {
+      const ref = noterefs[i];
+      tippyHover(ref, function() {
+        // use id or data attribute instead here
+        let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+        try { href = new URL(href).hash; } catch {}
+        const id = href.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note) {
+          return note.innerHTML;
+        } else {
+          return "";
+        }
+      });
+    }
+    const xrefs = window.document.querySelectorAll('a.quarto-xref');
+    const processXRef = (id, note) => {
+      // Strip column container classes
+      const stripColumnClz = (el) => {
+        el.classList.remove("page-full", "page-columns");
+        if (el.children) {
+          for (const child of el.children) {
+            stripColumnClz(child);
+          }
+        }
+      }
+      stripColumnClz(note)
+      if (id === null || id.startsWith('sec-')) {
+        // Special case sections, only their first couple elements
+        const container = document.createElement("div");
+        if (note.children && note.children.length > 2) {
+          container.appendChild(note.children[0].cloneNode(true));
+          for (let i = 1; i < note.children.length; i++) {
+            const child = note.children[i];
+            if (child.tagName === "P" && child.innerText === "") {
+              continue;
+            } else {
+              container.appendChild(child.cloneNode(true));
+              break;
+            }
+          }
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(container);
+          }
+          return container.innerHTML
+        } else {
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(note);
+          }
+          return note.innerHTML;
+        }
+      } else {
+        // Remove any anchor links if they are present
+        const anchorLink = note.querySelector('a.anchorjs-link');
+        if (anchorLink) {
+          anchorLink.remove();
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        if (note.classList.contains("callout")) {
+          return note.outerHTML;
+        } else {
+          return note.innerHTML;
+        }
+      }
+    }
+    for (var i=0; i<xrefs.length; i++) {
+      const xref = xrefs[i];
+      tippyHover(xref, undefined, function(instance) {
+        instance.disable();
+        let url = xref.getAttribute('href');
+        let hash = undefined; 
+        if (url.startsWith('#')) {
+          hash = url;
+        } else {
+          try { hash = new URL(url).hash; } catch {}
+        }
+        if (hash) {
+          const id = hash.replace(/^#\/?/, "");
+          const note = window.document.getElementById(id);
+          if (note !== null) {
+            try {
+              const html = processXRef(id, note.cloneNode(true));
+              instance.setContent(html);
+            } finally {
+              instance.enable();
+              instance.show();
+            }
+          } else {
+            // See if we can fetch this
+            fetch(url.split('#')[0])
+            .then(res => res.text())
+            .then(html => {
+              const parser = new DOMParser();
+              const htmlDoc = parser.parseFromString(html, "text/html");
+              const note = htmlDoc.getElementById(id);
+              if (note !== null) {
+                const html = processXRef(id, note);
+                instance.setContent(html);
+              } 
+            }).finally(() => {
+              instance.enable();
+              instance.show();
+            });
+          }
+        } else {
+          // See if we can fetch a full url (with no hash to target)
+          // This is a special case and we should probably do some content thinning / targeting
+          fetch(url)
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.querySelector('main.content');
+            if (note !== null) {
+              // This should only happen for chapter cross references
+              // (since there is no id in the URL)
+              // remove the first header
+              if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+                note.children[0].remove();
+              }
+              const html = processXRef(null, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      }, function(instance) {
+      });
+    }
+        let selectedAnnoteEl;
+        const selectorForAnnotation = ( cell, annotation) => {
+          let cellAttr = 'data-code-cell="' + cell + '"';
+          let lineAttr = 'data-code-annotation="' +  annotation + '"';
+          const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+          return selector;
+        }
+        const selectCodeLines = (annoteEl) => {
+          const doc = window.document;
+          const targetCell = annoteEl.getAttribute("data-target-cell");
+          const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+          const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+          const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+          const lineIds = lines.map((line) => {
+            return targetCell + "-" + line;
+          })
+          let top = null;
+          let height = null;
+          let parent = null;
+          if (lineIds.length > 0) {
+              //compute the position of the single el (top and bottom and make a div)
+              const el = window.document.getElementById(lineIds[0]);
+              top = el.offsetTop;
+              height = el.offsetHeight;
+              parent = el.parentElement.parentElement;
+            if (lineIds.length > 1) {
+              const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+              const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+              height = bottom - top;
+            }
+            if (top !== null && height !== null && parent !== null) {
+              // cook up a div (if necessary) and position it 
+              let div = window.document.getElementById("code-annotation-line-highlight");
+              if (div === null) {
+                div = window.document.createElement("div");
+                div.setAttribute("id", "code-annotation-line-highlight");
+                div.style.position = 'absolute';
+                parent.appendChild(div);
+              }
+              div.style.top = top - 2 + "px";
+              div.style.height = height + 4 + "px";
+              div.style.left = 0;
+              let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+              if (gutterDiv === null) {
+                gutterDiv = window.document.createElement("div");
+                gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+                gutterDiv.style.position = 'absolute';
+                const codeCell = window.document.getElementById(targetCell);
+                const gutter = codeCell.querySelector('.code-annotation-gutter');
+                gutter.appendChild(gutterDiv);
+              }
+              gutterDiv.style.top = top - 2 + "px";
+              gutterDiv.style.height = height + 4 + "px";
+            }
+            selectedAnnoteEl = annoteEl;
+          }
+        };
+        const unselectCodeLines = () => {
+          const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+          elementsIds.forEach((elId) => {
+            const div = window.document.getElementById(elId);
+            if (div) {
+              div.remove();
+            }
+          });
+          selectedAnnoteEl = undefined;
+        };
+          // Handle positioning of the toggle
+      window.addEventListener(
+        "resize",
+        throttle(() => {
+          elRect = undefined;
+          if (selectedAnnoteEl) {
+            selectCodeLines(selectedAnnoteEl);
+          }
+        }, 10)
+      );
+      function throttle(fn, ms) {
+      let throttle = false;
+      let timer;
+        return (...args) => {
+          if(!throttle) { // first call gets through
+              fn.apply(this, args);
+              throttle = true;
+          } else { // all the others get throttled
+              if(timer) clearTimeout(timer); // cancel #2
+              timer = setTimeout(() => {
+                fn.apply(this, args);
+                timer = throttle = false;
+              }, ms);
+          }
+        };
+      }
+        // Attach click handler to the DT
+        const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+        for (const annoteDlNode of annoteDls) {
+          annoteDlNode.addEventListener('click', (event) => {
+            const clickedEl = event.target;
+            if (clickedEl !== selectedAnnoteEl) {
+              unselectCodeLines();
+              const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+              if (activeEl) {
+                activeEl.classList.remove('code-annotation-active');
+              }
+              selectCodeLines(clickedEl);
+              clickedEl.classList.add('code-annotation-active');
+            } else {
+              // Unselect the line
+              unselectCodeLines();
+              clickedEl.classList.remove('code-annotation-active');
+            }
+          });
+        }
+    const findCites = (el) => {
+      const parentEl = el.parentElement;
+      if (parentEl) {
+        const cites = parentEl.dataset.cites;
+        if (cites) {
+          return {
+            el,
+            cites: cites.split(' ')
+          };
+        } else {
+          return findCites(el.parentElement)
+        }
+      } else {
+        return undefined;
+      }
+    };
+    var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+    for (var i=0; i<bibliorefs.length; i++) {
+      const ref = bibliorefs[i];
+      const citeInfo = findCites(ref);
+      if (citeInfo) {
+        tippyHover(citeInfo.el, function() {
+          var popup = window.document.createElement('div');
+          citeInfo.cites.forEach(function(cite) {
+            var citeDiv = window.document.createElement('div');
+            citeDiv.classList.add('hanging-indent');
+            citeDiv.classList.add('csl-entry');
+            var biblioDiv = window.document.getElementById('ref-' + cite);
+            if (biblioDiv) {
+              citeDiv.innerHTML = biblioDiv.innerHTML;
+            }
+            popup.appendChild(citeDiv);
+          });
+          return popup.innerHTML;
+        });
+      }
+    }
+  });
+  </script>
+</div> <!-- /content -->
+
+
+
+
+<footer class="footer"><div class="nav-footer"><div class="nav-footer-center"><div class="toc-actions d-sm-block d-md-none"><ul><li><a href="https://github.com/AnswerDotAI/jupyasyncclient/issues/new" class="toc-action"><i class="bi bi-github"></i>Report an issue</a></li></ul></div></div></div></footer></body></html>
