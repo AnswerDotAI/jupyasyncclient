@@ -39,9 +39,7 @@ class JupyAsyncMultiKernelManager(KernelApi):
     async def restart_kernel(self, kernel_id): return await self.api.kernels.restart(kid=kernel_id)
 
     async def is_alive(self, kernel_id):
-        try:
-            await self.api.kernels.get_kernel(kid=kernel_id)
-            return True
+        try: return bool(m := await self.api.kernels.get_kernel(kid=kernel_id)) and m.get('execution_state') != 'dead'
         except Exception: return False
 
     async def shutdown_all(self, now=False, only_owned=True):

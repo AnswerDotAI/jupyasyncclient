@@ -1,6 +1,8 @@
 """Files and cells over the gateway's contents and cells APIs
 
-[rustygate](https://github.com/AnswerDotAI/rustygate) serves two REST families beside the kernels API: a jupyter-inspired files API (`/api/contents`) and a cells API (`/api/cells`, per-cell operations on notebooks). This page builds their clients: `JupyAsyncFilesClient` addresses files and directories by path, `JupyAsyncCellsClient` binds to one notebook's cells, and `apply_ops` is the reference applier for the `cell_ops` change broadcasts that arrive on a kernel client's merged stream (`get_jmsg`, `channel` `'cells'`).
+[Rustygate](https://github.com/AnswerDotAI/rustygate) provides a Jupyter-style `/api/contents` API for files and directories and `/api/cells` for editing cells inside notebooks.
+
+Use `JupyAsyncFilesClient` to address files by path. `JupyAsyncCellsClient` works with one notebook's cells. A kernel client bound to that notebook receives `cell_ops` change messages on its `cells` channel. `apply_ops` updates a local list of cells from those messages. Attach `JmsgQueues` if you want to read the broadcasts with `get_jmsg`.
 
 Docs: https://AnswerDotAI.github.io/jupyasyncclient/files.html.md"""
 
@@ -71,7 +73,7 @@ async def delete(self:JupyAsyncFilesClient, path, expected_hash=None):
 # %% ../nbs/02_files.ipynb #a85d5ed9
 @patch
 async def write(self:JupyAsyncFilesClient, path, content, expected_hash=None, unique=False):
-    "Write `content` (`str` as text, `bytes` as base64), returning the model with its new `hash`; `unique` lands at a free `name_n.ext`."
+    "Write text or base64-encoded bytes and return the model with its new hash. With `unique`, choose a free `name_n.ext`."
     c,f = (b64encode(content).decode(),'base64') if isinstance(content, bytes) else (content,'text')
     return await self.put(path, expected_hash=expected_hash, unique=unique or None, content=c, format=f)
 
@@ -95,12 +97,12 @@ async def mkdir(self:JupyAsyncFilesClient, path, parents=False):
 
 @patch
 async def rename(self:JupyAsyncFilesClient, path, to):
-    "Rename `path` to `to`, returning the new model; an existing `to` raises `HashMismatch`, since a rename never overwrites."
+    "Rename and return the new model. An existing destination raises HashMismatch; it is never overwritten."
     return await self.patch(path, path=to)
 
 @patch
 async def copy(self:JupyAsyncFilesClient, src, to, unique=False):
-    "Copy `src` to `to`, returning the new model; `unique` lands at a free `name_n.ext`."
+    "Copy and return the new model. With `unique`, choose a free `name_n.ext`."
     return await self.post(to, unique=unique or None, copy_from=src)
 
 # %% ../nbs/02_files.ipynb #ee81e54e
@@ -181,15 +183,24 @@ async def _lookup(self:JupyAsyncCellsClient, ids):
     return got[0] if one else got
 
 # %% ../nbs/02_files.ipynb #c4eec70d
+def _update_cell(cell, fields):
+    cell.update({k:v for k,v in fields.items() if k not in ('op','id')})
+    if cell['cell_type']=='code':
+        cell.setdefault('outputs', [])
+        cell.setdefault('execution_count', None)
+    else:
+        cell.pop('outputs', None)
+        cell.pop('execution_count', None)
+
 def apply_ops(cells, ops):
-    "Apply a `cell_ops` list to `cells` in place, in order, bending as the server does; returns `cells`"
+    "Apply cell broadcast operations in order to `cells` in place and return that list."
     for o in ops:
         ids = [c['id'] for c in cells]
         op = o['op']
-        if op=='update' and o['id'] in ids: cells[ids.index(o['id'])].update({k:v for k,v in o.items() if k not in ('op','id')})
+        if op=='update' and o['id'] in ids: _update_cell(cells[ids.index(o['id'])], o)
         elif op in ('add','update'):
             c = dict(o['cell']) if op=='add' else {k:v for k,v in o.items() if k!='op'}
-            if c.get('id') in ids: cells[ids.index(c['id'])].update({k:v for k,v in c.items() if k!='id'})
+            if c.get('id') in ids: _update_cell(cells[ids.index(c['id'])], c)
             else:
                 c.setdefault('cell_type', 'code')
                 c.setdefault('metadata', {})

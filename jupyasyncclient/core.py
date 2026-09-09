@@ -114,7 +114,7 @@ async def start_kernel(self:JupyAsyncKernelClient, kernel_name="python3", **kwar
 # %% ../nbs/00_core.ipynb #bc577f39
 @patch
 async def shutdown_kernel(self: JupyAsyncKernelClient):
-    "Delete the kernel, then close this client: with the kernel gone the connection has nothing left to serve"
+    "Request kernel deletion, then close this client even if deletion fails."
     try:
         if self.kernel_id: return await self.api.kernels.delete_kernel(kid=self.kernel_id)
     finally: await self.aclose()
@@ -135,7 +135,7 @@ async def model(self: JupyAsyncKernelClient):
 @patch
 async def is_alive(self: JupyAsyncKernelClient):
     if not self.kernel_id: return False
-    try: return bool(await self.model())
+    try: return bool(m := await self.model()) and m.get('execution_state') != 'dead'
     except Exception: return False
 
 # %% ../nbs/00_core.ipynb #60942186
@@ -190,7 +190,9 @@ async def _recv_loop(self: JupyAsyncKernelClient):
             else: continue
             r = self.route(msg)
             if inspect.isawaitable(r): await r
-    if self.reconnect and not self._closing: self._start_task = asyncio.create_task(self._reconnect())
+    if not self._closing:
+        if self.reconnect: self._start_task = asyncio.create_task(self._reconnect())
+        else: self.fail_waiters(ConnectionError('websocket closed (reconnect disabled)'))
 
 # %% ../nbs/00_core.ipynb #3cd67196
 @patch
@@ -208,7 +210,7 @@ async def _start_ws(self: JupyAsyncKernelClient):
 # %% ../nbs/00_core.ipynb #6606950e
 @patch
 def _exec_req(self: JupyAsyncKernelClient, name, content=None, channel="shell", metadata=None, subshell_id=None, parent=None, msg_id=None, buffers=None):
-    "Build a signed message and queue its frame, fire-and-forget; returns the msg_id."
+    "Build and queue a protocol message without waiting for its reply; return its msg_id."
     msg = self.session.msg(name, content, metadata=metadata, parent=parent)
     if buffers: msg["buffers"] = buffers
     if subshell_id: msg["header"]["subshell_id"] = subshell_id
@@ -216,7 +218,7 @@ def _exec_req(self: JupyAsyncKernelClient, name, content=None, channel="shell", 
     return self.send(msg, channel)
 
 def _gen_request(self, name):
-    "Generated `*_request` senders, each returning an awaitable of its reply; other names raise, so typos fail instead of sending bogus messages. Assigned onto the class below (a module-level `__getattr__` would become a PEP 562 hook)."
+    "Create an awaitable reply sender for a public `*_request` name. Other names raise AttributeError. Assign this to the class: module-level __getattr__ would invoke PEP 562 instead."
     if name.startswith("_") or not name.endswith("_request"): raise AttributeError(name)
     def _f(channel="shell", timeout=None, **kwargs): return self.request(name, kwargs or None, channel, timeout=timeout)
     return _f
@@ -245,7 +247,7 @@ async def wait_for_ready(self: JupyAsyncKernelClient, timeout=None):
 @patch
 def execute(self: JupyAsyncKernelClient, code, silent=False, store_history=True, user_expressions=None, allow_stdin=None, stop_on_error=True,
     msg_id=None, metadata=None, subshell_id=None, buffers=None):
-    "Send an `execute_request`, fire-and-forget; returns its msg_id."
+    "Queue an `execute_request` without waiting for a reply; return its msg_id."
     user_expressions = {} if user_expressions is None else user_expressions
     allow_stdin = self.allow_stdin if allow_stdin is None else allow_stdin
     if not isinstance(code, str): raise ValueError(f"code {code!r} must be a string")
@@ -293,7 +295,8 @@ async def _reconnect(self: JupyAsyncKernelClient):
             exc = None
             try: await self.model()
             except APIError as he:
-                if he.status_code: exc = DeadKernelError(f'kernel {self.kernel_id} is gone: {he.message}')
+                if he.status_code == 404: exc = DeadKernelError(f'kernel {self.kernel_id} is gone: {he.message}')
+                elif he.status_code and not he.retryable: exc = he
             except Exception: pass  # the server is unreachable too: keep trying until the ceiling
             if exc is None and time.monotonic() > deadline: exc = ConnectionError(f'gave up reconnecting after {self.reconnect_ceiling}s: {e}')
             if exc:
@@ -310,7 +313,7 @@ def shutdown(self: JupyAsyncKernelClient, restart=False, timeout=None):
 # %% ../nbs/00_core.ipynb #1239b481
 @patch(cls_method=True)
 async def connect(cls:JupyAsyncKernelClient, base_url, kernel=None, token=None, timeout=60, verify=True, **kw):
-    "Construct + create a kernel (or attach to `kernel`) + open channels + wait ready; a created kernel is `owned`"
+    "Return a ready client attached to `kernel`, or create a kernel and mark it owned."
     self = cls(base_url, kernel_id=kernel, token=token, verify=verify)
     if kernel is None:
         await self.start_kernel(**kw)

@@ -34,7 +34,7 @@ class JupyAsyncKernelManager(KernelApi):
     async def restart_kernel(self, **kw): return await self.api.kernels.restart(kid=self._kid())
 
     async def is_alive(self):
-        try: return bool(await self.api.kernels.get_kernel(kid=self._kid()))
+        try: return bool(m := await self.api.kernels.get_kernel(kid=self._kid())) and m.get('execution_state') != 'dead'
         except Exception: return False
 
     def client(self, kernel_id=None, session_id=None, username=None, headers=None, timeout=None, http_client=None):
