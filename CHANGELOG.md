@@ -2,6 +2,13 @@
 
 <!-- do not remove -->
 
+## 0.2.15
+
+### New Features
+
+- Treat dead-state kernels as not alive, fail waiters when reconnect is off, only 404 kills reconnect, normalize cell fields in `apply_ops` ([#26](https://github.com/AnswerDotAI/jupyasyncclient/issues/26))
+
+
 ## 0.2.14
 
 ### New Features
