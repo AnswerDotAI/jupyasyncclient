@@ -2,6 +2,13 @@
 
 <!-- do not remove -->
 
+## 0.2.16
+
+### New Features
+
+- Drop hash-based conditional writes and gateway replay; add kernel-addressed cells client with section/ancestors selection and meta op ([#27](https://github.com/AnswerDotAI/jupyasyncclient/issues/27))
+
+
 ## 0.2.15
 
 ### New Features
