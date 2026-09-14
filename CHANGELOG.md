@@ -2,6 +2,13 @@
 
 <!-- do not remove -->
 
+## 0.2.17
+
+### New Features
+
+- Kernel ownership now set from `create_kernel` status (201 new, 200 reused); path/cwd coerced to str; chainable `start_channels`/`wait_for_ready` ([#28](https://github.com/AnswerDotAI/jupyasyncclient/issues/28))
+
+
 ## 0.2.16
 
 ### New Features
