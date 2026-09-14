@@ -88,7 +88,7 @@ async def aclose(self: JupyAsyncKernelClient):
     self._closing = True
     if self._send_task and not self._send_task.done():   # the None sentinel ends `_send_loop` once the queue has drained
         self._send_q.put_nowait(None)
-        with suppress(Exception):
+        with suppress(asyncio.CancelledError, Exception):
             async with asyncio.timeout(2): await self._send_task
     for t in (self._start_task, self._send_task, self._recv_task):
         if t and not t.done(): t.cancel()

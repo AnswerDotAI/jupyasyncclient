@@ -18,6 +18,8 @@ The [core notebook](00_core.ipynb) builds the client bottom-up and demonstrates 
 - [term](01_term.ipynb) demonstrates [`JupyAsyncTerminalClient`](https://AnswerDotAI.github.io/jupyasyncclient/term.html#jupyasyncterminalclient) for gateway-hosted terminals.
 - [files](02_files.ipynb) builds [`JupyAsyncFilesClient`](https://AnswerDotAI.github.io/jupyasyncclient/files.html#jupyasyncfilesclient) and [`JupyAsyncCellsClient`](https://AnswerDotAI.github.io/jupyasyncclient/files.html#jupyasynccellsclient) over the files and cells APIs. It includes [`apply_ops`](https://AnswerDotAI.github.io/jupyasyncclient/files.html#apply_ops) for updating a local view from a kernel’s change broadcasts.
 
+[`JupyAsyncCellsClient.view`](https://AnswerDotAI.github.io/jupyasyncclient/files.html#jupyasynccellsclient.view) returns selected cells with the current notebook path and requested metadata. `cells` returns the selected cell list. Both accept a filename or a kernel binding through the client constructor.
+
 ## Install
 
 ``` sh
@@ -34,7 +36,7 @@ The client’s `execute`, `complete`, `inspect`, `history`, `kernel_info`, and `
 - `reply` awaits one `execute_reply`.
 - `run` collects every message caused by an execution.
 
-Broadcast traffic goes to the `on_jmsg` callback. `JmsgQueues` provides queues for applications that need to pull messages instead.
+Every inbound message also reaches the `on_jmsg` callback once, in receive order, after request routing. The callback can be synchronous or asynchronous. The reader awaits it before taking the next message. Do not await replies on the same websocket from the callback. `JmsgQueues` provides queues for applications that need to pull the same messages instead.
 
 Every protocol `*_request` type is callable by name and returns an awaitable for its reply. This includes subshell requests. New protocol messages do not require a client release.
 
@@ -50,7 +52,7 @@ g = start_gateway()
 g
 ```
 
-    True
+    <Gateway http://127.0.0.1:60487 pid=47781 up>
 
 `start_new_server_kernel` starts a kernel and returns its manager and a ready client. This example uses a single `jmsg` queue for iopub and stdin messages:
 

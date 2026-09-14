@@ -12,6 +12,6 @@ from .core import JupyAsyncKernelClient, DeadKernelError, dumps, loads, serializ
 from .manager import JupyAsyncKernelManager, start_new_server_kernel
 from .multimanager import JupyAsyncMultiKernelManager
 from .term import JupyAsyncTerminalClient
-from .files import JupyAsyncFilesClient, JupyAsyncCellsClient, HashMismatch, apply_ops
+from .files import JupyAsyncFilesClient, JupyAsyncCellsClient, apply_ops
 
-__all__ = ["JupyAsyncKernelClient", "JmsgQueues", "DeadKernelError", "JupyAsyncKernelManager", "JupyAsyncMultiKernelManager", "JupyAsyncTerminalClient", "JupyAsyncFilesClient", "JupyAsyncCellsClient", "HashMismatch", "apply_ops", "start_new_server_kernel"]
+__all__ = ["JupyAsyncKernelClient", "JmsgQueues", "DeadKernelError", "JupyAsyncKernelManager", "JupyAsyncMultiKernelManager", "JupyAsyncTerminalClient", "JupyAsyncFilesClient", "JupyAsyncCellsClient", "apply_ops", "start_new_server_kernel"]
