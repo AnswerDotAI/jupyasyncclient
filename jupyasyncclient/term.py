@@ -1,6 +1,23 @@
 """A client for gateway-hosted terminals: REST lifecycle plus one websocket attachment
 
-[rustygate](https://github.com/AnswerDotAI/rustygate) hosts terminals as siblings of kernels (ptys managed by [ptymini](https://github.com/AnswerDotAI/ptymini), exposed at `/api/terminals`), so a client app can put a real shell next to its kernel — same machine, same container, same filesystem. `JupyAsyncTerminalClient` is that surface from the client side, shaped like `JupyAsyncKernelClient`: the same `KernelApi` HTTP plumbing for lifecycle, and one websocket for the byte stream. The ws contract is jupygate's: binary frames are pty bytes verbatim in both directions; text frames are JSON control — the server sends `setup` on accept (any replayed scrollback follows as binary), `gap` when this client fell behind the replay ring, and `eof` (with the exit code) when the pty dies; the client sends `set_size`.
+`JupyAsyncTerminalClient` connects to terminals hosted by [rustygate](https://github.com/AnswerDotAI/rustygate). An app can use it to provide a shell on the same machine and filesystem as its kernels, including inside a container. The gateway uses [ptymini](https://github.com/AnswerDotAI/ptymini) to manage the terminals.
+
+The client uses `KernelApi` for terminal lifecycle requests at `/api/terminals` and a websocket for input, output and terminal controls.
+
+## The channel
+
+`connect` opens the websocket and returns the server's `setup` frame. The gateway then replays available scrollback as binary frames.
+
+The websocket uses jupygate's protocol. Binary frames carry terminal bytes unchanged in either direction. Text frames contain JSON controls:
+
+- The server sends `setup` when a client connects.
+- `gap` reports that the client fell behind the server's replay buffer.
+- `eof` reports the terminal's exit code.
+- The client sends `set_size` to resize the terminal.
+
+`write` sends bytes to the terminal. `resize` sends `set_size`. `frames` yields output as `bytes` and controls as dictionaries. Use one `frames` iterator per connection. Multiple iterators would compete to read the same socket.
+
+`aclose` closes this client's websocket attachment. It does not delete the terminal. Use `shutdown_terminal` to stop the terminal for all clients.
 
 Docs: https://AnswerDotAI.github.io/jupyasyncclient/term.html.md"""
 

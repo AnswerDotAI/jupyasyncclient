@@ -178,6 +178,7 @@ def _update_cell(cell, fields):
         cell.pop('outputs', None)
         cell.pop('execution_count', None)
 
+# %% ../nbs/02_files.ipynb #0d2b9fa0
 def apply_ops(cells, ops):
     "Apply cell broadcast operations in order to `cells` in place and return that list."
     for o in ops:

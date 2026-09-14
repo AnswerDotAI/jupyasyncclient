@@ -71,7 +71,7 @@ class JupyAsyncKernelClient(RouterOps, EvalOps, KernelApi):
         reconnect=True, reconnect_ceiling=300.0, verify=True, max_size=256*2**20):
         super().__init__(base_url, token=token, headers=headers, timeout=timeout, http_client=http_client, verify=verify)
         self.kernel_id = kernel_id
-        self.owned = False    # True only when `connect` created the kernel; honored by `__aexit__`
+        self.owned = False    # True only when `start_kernel` created the kernel; honored by `__aexit__`
         self.session_id = session_id or uuid.uuid4().hex
         self.session = Session(session=self.session_id, username=username or os.environ.get("USER") or "")
         self._ws,self._start_task,self._send_task,self._recv_task,self._close_task = [None]*5
@@ -107,8 +107,11 @@ def stop_channels(self: JupyAsyncKernelClient):
 # %% ../nbs/00_core.ipynb #1263d477
 @patch
 async def start_kernel(self:JupyAsyncKernelClient, kernel_name="python3", **kwargs):
-    model = await self.api.kernels.create_kernel(name=kernel_name, **kwargs)
-    self.kernel_id = model["id"]
+    for k in ('path', 'cwd'):
+        if kwargs.get(k) is not None: kwargs[k] = str(kwargs[k])
+    response = await self.api.kernels.create_kernel(name=kernel_name, raw_=True, **kwargs)
+    model = dict2obj(response.json())
+    self.kernel_id,self.owned = model['id'],response.status_code == 201
     return model
 
 # %% ../nbs/00_core.ipynb #bc577f39
@@ -188,8 +191,10 @@ async def _recv_loop(self: JupyAsyncKernelClient):
             if isinstance(data, str): msg = loads(data)
             elif isinstance(data, bytes): msg = deserialize_binary_message(data)
             else: continue
-            r = self.route(msg)
-            if inspect.isawaitable(r): await r
+            try:
+                r = self.route(msg)
+                if inspect.isawaitable(r): await r
+            except Exception: log.exception('inbound message handler failed')
     if not self._closing:
         if self.reconnect: self._start_task = asyncio.create_task(self._reconnect())
         else: self.fail_waiters(ConnectionError('websocket closed (reconnect disabled)'))
@@ -228,8 +233,8 @@ JupyAsyncKernelClient.__getattr__ = _gen_request
 # %% ../nbs/00_core.ipynb #f5d47bbe
 @patch
 def start_channels(self: JupyAsyncKernelClient, shell=True, iopub=True, stdin=True, control=True):
-    if not (shell or iopub or stdin or control): return
-    if self._start_task and not self._start_task.done(): return
+    if not (shell or iopub or stdin or control): return self
+    if self._start_task and not self._start_task.done(): return self
     self._start_task = asyncio.create_task(self._start_ws())
     return self
 
@@ -242,6 +247,7 @@ def channels_running(self: JupyAsyncKernelClient): return bool(self._ws and self
 async def wait_for_ready(self: JupyAsyncKernelClient, timeout=None):
     await self._ensure_started()
     await self.kernel_info_request(timeout=timeout)
+    return self
 
 # %% ../nbs/00_core.ipynb #7daa3f7a
 @patch
@@ -313,11 +319,9 @@ def shutdown(self: JupyAsyncKernelClient, restart=False, timeout=None):
 # %% ../nbs/00_core.ipynb #1239b481
 @patch(cls_method=True)
 async def connect(cls:JupyAsyncKernelClient, base_url, kernel=None, token=None, timeout=60, verify=True, **kw):
-    "Return a ready client attached to `kernel`, or create a kernel and mark it owned."
+    "Return a ready client; only a newly created kernel is owned."
     self = cls(base_url, kernel_id=kernel, token=token, verify=verify)
-    if kernel is None:
-        await self.start_kernel(**kw)
-        self.owned = True
+    if kernel is None: await self.start_kernel(**kw)
     self.start_channels()
     await self.wait_for_ready(timeout=timeout)
     return self
