@@ -11,7 +11,7 @@ async def test_walkthrough(jp_server):
         qs = JmsgQueues(kc, queues=("jmsg",), merge=dict(iopub="jmsg", stdin="jmsg"))
         rep = await kc.reply("print('hello'); 6*7", timeout=TIMEOUT)
         assert rep["content"]["status"] == "ok"
-        task = asyncio.create_task(kc.reply("x = input()", timeout=TIMEOUT))
+        task = asyncio.create_task(kc.reply("x = input()", allow_stdin=True, timeout=TIMEOUT))
         await qs.jmsg_for("input_request", timeout=TIMEOUT)
         kc.input("test")
         assert (await task)["content"]["status"] == "ok"
