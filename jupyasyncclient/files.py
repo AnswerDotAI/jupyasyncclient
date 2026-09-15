@@ -130,6 +130,8 @@ async def view(
     idx=None, # Cell positions to keep: comma-separated str, or a list of ints, 0-based, negative from the end; unions with `ids`
     section=None, # Cell id selecting a heading and its descendants; a non-heading selects itself
     ancestors=None, # Cell id whose enclosing headings to select, outermost first, excluding the cell itself
+    before=None, # Cell id: select every cell before it, excluding it
+    after=None, # Cell id: select every cell after it, excluding it
     q=None, # Keep only cells whose source matches this regex (multiline, smart-case)
     cell_type=None, # Keep only cells of this type: 'code', 'markdown', or 'raw'
     meta=None, # Keep only cells whose metadata contains this dict as a recursive subset; a None value means "key present"
@@ -141,7 +143,7 @@ async def view(
     "The selected cells with their notebook path, requested metadata and matched ids."
     return await self._op(self.api.cells.get_cells if self.kernel_id is None else self.api.kernels.get_kernel_cells,
         **(dict(path=self.path) if self.kernel_id is None else dict(kid=self.kernel_id)),
-        ids=_cs(ids), idx=_cs(idx), section=section, ancestors=ancestors, q=q, cell_type=cell_type,
+        ids=_cs(ids), idx=_cs(idx), section=section, ancestors=ancestors, before=before, after=after, q=q, cell_type=cell_type,
         meta=None if meta is None else json.dumps(meta), meta_not=None if meta_not is None else json.dumps(meta_not),
         limit=limit, context=context, fields=fields)
 
