@@ -1,0 +1,1163 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.10.18">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+<meta name="description" content="Files and cells over the gateway’s contents and cells APIs">
+
+<title>files – jupyasyncclient</title>
+<style>
+/* Default styles provided by pandoc.
+** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
+*/
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: 1.5em;}
+div.column{flex: auto;}
+@media screen {
+div.columns{gap: min(4vw, 1.5em);}
+div.column{overflow-x: auto;}
+}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+</style>
+
+
+<script src="site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="site_libs/quarto-nav/headroom.min.js"></script>
+<script src="site_libs/clipboard/clipboard.min.js"></script>
+<script src="site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="site_libs/quarto-search/fuse.min.js"></script>
+<script src="site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="./">
+<script src="site_libs/quarto-html/quarto.js" type="module"></script>
+<script src="site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
+<script src="site_libs/quarto-html/popper.min.js"></script>
+<script src="site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="site_libs/quarto-html/anchor.min.js"></script>
+<link href="site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="site_libs/quarto-html/quarto-syntax-highlighting-64a204ab8560d761af7679ceaba22944.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="site_libs/bootstrap/bootstrap-5ff355f32169432f12e3b54c979a24ba.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<script id="quarto-search-options" type="application/json">{
+  "location": "navbar",
+  "copy-button": false,
+  "collapse-after": 3,
+  "panel-placement": "end",
+  "type": "overlay",
+  "limit": 50,
+  "keyboard-shortcut": [
+    "f",
+    "/",
+    "s"
+  ],
+  "show-item-context": false,
+  "language": {
+    "search-no-results-text": "No results",
+    "search-matching-documents-text": "matching documents",
+    "search-copy-link-title": "Copy link to search",
+    "search-hide-matches-text": "Hide additional matches",
+    "search-more-match-text": "more match in this document",
+    "search-more-matches-text": "more matches in this document",
+    "search-clear-button-title": "Clear",
+    "search-text-placeholder": "",
+    "search-detached-cancel-button-title": "Cancel",
+    "search-submit-button-title": "Submit",
+    "search-label": "Search"
+  }
+}</script>
+
+
+<link rel="stylesheet" href="styles.css">
+<meta property="og:title" content="files – jupyasyncclient">
+<meta property="og:description" content="Files and cells over the gateway’s contents and cells APIs">
+<meta property="og:site_name" content="jupyasyncclient">
+<meta name="twitter:title" content="files – jupyasyncclient">
+<meta name="twitter:description" content="Files and cells over the gateway’s contents and cells APIs">
+<meta name="twitter:card" content="summary">
+</head>
+
+<body class="nav-sidebar floating nav-fixed quarto-light">
+
+<div id="quarto-search-results"></div>
+  <header id="quarto-header" class="headroom fixed-top">
+    <nav class="navbar navbar-expand-lg " data-bs-theme="dark">
+      <div class="navbar-container container-fluid">
+      <div class="navbar-brand-container mx-auto">
+    <a class="navbar-brand" href="./index.html">
+    <span class="navbar-title">jupyasyncclient</span>
+    </a>
+  </div>
+        <div class="quarto-navbar-tools tools-end">
+</div>
+          <div id="quarto-search" class="" title="Search"></div>
+      </div> <!-- /container-fluid -->
+    </nav>
+  <nav class="quarto-secondary-nav">
+    <div class="container-fluid d-flex">
+      <button type="button" class="quarto-btn-toggle btn" data-bs-toggle="collapse" role="button" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
+        <i class="bi bi-layout-text-sidebar-reverse"></i>
+      </button>
+        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="./files.html">files</a></li></ol></nav>
+        <a class="flex-grow-1" role="navigation" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">      
+        </a>
+    </div>
+  </nav>
+</header>
+<!-- content -->
+<div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article page-navbar">
+<!-- sidebar -->
+  <nav id="quarto-sidebar" class="sidebar collapse collapse-horizontal quarto-sidebar-collapse-item sidebar-navigation floating overflow-auto">
+    <div class="sidebar-menu-container"> 
+    <ul class="list-unstyled mt-1">
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./index.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">jupyasyncclient</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./core.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">core</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./term.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">term</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./files.html" class="sidebar-item-text sidebar-link active">
+ <span class="menu-text">files</span></a>
+  </div>
+</li>
+    </ul>
+    </div>
+</nav>
+<div id="quarto-sidebar-glass" class="quarto-sidebar-collapse-item" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item"></div>
+<!-- margin-sidebar -->
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+        <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">On this page</h2>
+   
+  <ul>
+  <li><a href="#the-files-client" id="toc-the-files-client" class="nav-link active" data-scroll-target="#the-files-client">The files client</a></li>
+  <li><a href="#the-cells-client" id="toc-the-cells-client" class="nav-link" data-scroll-target="#the-cells-client">The cells client</a></li>
+  <li><a href="#applying-ops" id="toc-applying-ops" class="nav-link" data-scroll-target="#applying-ops">Applying ops</a></li>
+  <li><a href="#change-broadcasts" id="toc-change-broadcasts" class="nav-link" data-scroll-target="#change-broadcasts">Change broadcasts</a></li>
+  </ul>
+<div class="toc-actions"><ul><li><a href="https://github.com/AnswerDotAI/jupyasyncclient/issues/new" class="toc-action"><i class="bi bi-github"></i>Report an issue</a></li></ul></div><div class="quarto-alternate-formats"><h2>Other Formats</h2><ul><li><a href="files.html.md"><i class="bi bi-file-code"></i>Markdown</a></li></ul></div></nav>
+    </div>
+<!-- main -->
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title">files</h1>
+</div>
+
+<div>
+  <div class="description">
+    Files and cells over the gateway’s contents and cells APIs
+  </div>
+</div>
+
+
+<div class="quarto-title-meta">
+
+    
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<!-- WARNING: THIS FILE WAS AUTOGENERATED! DO NOT EDIT! -->
+<p><a href="https://github.com/AnswerDotAI/rustygate">Rustygate</a> provides a Jupyter-style <code>/api/contents</code> API for files and directories and <code>/api/cells</code> for editing cells inside notebooks.</p>
+<p>Use <a href="https://AnswerDotAI.github.io/jupyasyncclient/files.html#jupyasyncfilesclient"><code>JupyAsyncFilesClient</code></a> to address files by path. <a href="https://AnswerDotAI.github.io/jupyasyncclient/files.html#jupyasynccellsclient"><code>JupyAsyncCellsClient</code></a> works with one notebook’s cells. A kernel client bound to that notebook receives <code>cell_ops</code> change messages on its <code>cells</code> channel. <a href="https://AnswerDotAI.github.io/jupyasyncclient/files.html#apply_ops"><code>apply_ops</code></a> updates a local list of cells from those messages. Attach <code>JmsgQueues</code> if you want to read the broadcasts with <code>get_jmsg</code>.</p>
+<div id="c078132f" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-09-15T21:38:52.166208+00:00&quot;,&quot;shell.execute_reply&quot;:&quot;2026-09-15T21:38:52.168448+00:00&quot;,&quot;total&quot;:0.0022438750000048913}}" data-execution_count="2">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> asyncio, tempfile</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> pathlib <span class="im">import</span> Path</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> queue <span class="im">import</span> Empty</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> fastcore.test <span class="im">import</span> test_eq, expect_fail</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> rustygate.tools <span class="im">import</span> start_gateway</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> jupyasyncclient <span class="im">import</span> JupyAsyncKernelClient, JmsgQueues</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<section id="the-files-client" class="level2">
+<h2 class="anchored" data-anchor-id="the-files-client">The files client</h2>
+<p>Both clients inherit <a href="https://AnswerDotAI.github.io/jupyasyncclient/core.html#kernelapi"><code>KernelApi</code></a>’s base URL, authentication, and HTTP transport. You can supply an HTTP client or let the transport create one for each request. Writes replace the addressed content; the last accepted edit wins.</p>
+<div id="ad0002e8" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-09-15T21:38:52.169482+00:00&quot;,&quot;shell.execute_reply&quot;:&quot;2026-09-15T21:38:52.605030+00:00&quot;,&quot;total&quot;:0.435553705999979}}" data-execution_count="4">
+<hr>
+<p><a href="https://github.com/AnswerDotAI/jupyasyncclient/blob/main/jupyasyncclient/files.py#L23" target="_blank" style="float:right; font-size:smaller">source</a></p>
+<section id="jupyasyncfilesclient" class="level3">
+<h3 class="anchored" data-anchor-id="jupyasyncfilesclient">JupyAsyncFilesClient</h3>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> JupyAsyncFilesClient(</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>    base_url, token:NoneType<span class="op">=</span><span class="va">None</span>, headers:NoneType<span class="op">=</span><span class="va">None</span>, timeout:<span class="bu">int</span><span class="op">=</span><span class="dv">30</span>, http_client:NoneType<span class="op">=</span><span class="va">None</span>,</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>    verify:<span class="bu">bool</span><span class="op">=</span><span class="va">True</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>):</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p><em>Files and directories over the gateway’s contents API.</em></p>
+</section>
+</div>
+<p><code>_op</code> calls an operation from the bundled OpenAPI specification, omitting arguments with value <code>None</code>. HTTP errors propagate as <code>APIError</code>.</p>
+<p>The generated operation separates query parameters from body fields. For example, <code>get(path)</code> requests a model and <code>put(path, type='directory')</code> requests directory creation. <code>patch</code> passes its body through <code>body_</code> because a rename has two paths: the URL’s source path and the body’s destination <code>path</code>.</p>
+<p>Use <code>get</code> to read a contents model, <code>put</code> to write, and <code>post</code> to copy through the contents API:</p>
+<div id="5b4eb289" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-09-15T21:38:52.610414+00:00&quot;,&quot;shell.execute_reply&quot;:&quot;2026-09-15T21:38:52.614470+00:00&quot;,&quot;total&quot;:0.004059009000002334}}" data-execution_count="7">
+<hr>
+<p><a href="https://github.com/AnswerDotAI/jupyasyncclient/blob/main/jupyasyncclient/files.py#L46" target="_blank" style="float:right; font-size:smaller">source</a></p>
+<section id="jupyasyncfilesclient.post" class="level3">
+<h3 class="anchored" data-anchor-id="jupyasyncfilesclient.post">JupyAsyncFilesClient.post</h3>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="cf">async</span> <span class="kw">def</span> post(</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>    path, <span class="op">**</span>kwargs</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>):</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p><em>POST to the contents API; <code>kwargs</code> are its body and query fields.</em></p>
+</section>
+</div>
+<div id="f648621c" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-09-15T21:38:52.614567+00:00&quot;,&quot;shell.execute_reply&quot;:&quot;2026-09-15T21:38:52.618445+00:00&quot;,&quot;total&quot;:0.0038815759999977217}}" data-execution_count="8">
+<hr>
+<p><a href="https://github.com/AnswerDotAI/jupyasyncclient/blob/main/jupyasyncclient/files.py#L41" target="_blank" style="float:right; font-size:smaller">source</a></p>
+<section id="jupyasyncfilesclient.put" class="level3">
+<h3 class="anchored" data-anchor-id="jupyasyncfilesclient.put">JupyAsyncFilesClient.put</h3>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb4"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="cf">async</span> <span class="kw">def</span> put(</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>    path, <span class="op">**</span>kwargs</span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>):</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p><em>PUT to the contents API; <code>kwargs</code> are its body and query fields.</em></p>
+</section>
+</div>
+<div id="f511a960" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-09-15T21:38:52.618575+00:00&quot;,&quot;shell.execute_reply&quot;:&quot;2026-09-15T21:38:52.622592+00:00&quot;,&quot;total&quot;:0.0040206239999918125}}" data-execution_count="9">
+<hr>
+<p><a href="https://github.com/AnswerDotAI/jupyasyncclient/blob/main/jupyasyncclient/files.py#L35" target="_blank" style="float:right; font-size:smaller">source</a></p>
+<section id="jupyasyncfilesclient.get" class="level3">
+<h3 class="anchored" data-anchor-id="jupyasyncfilesclient.get">JupyAsyncFilesClient.get</h3>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb5"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="cf">async</span> <span class="kw">def</span> get(</span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>    path:<span class="bu">str</span><span class="op">=</span><span class="st">''</span>, <span class="op">**</span>kwargs</span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>):</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p><em>The model at <code>path</code>; <code>kwargs</code> become query parameters, e.g.&nbsp;<code>fields</code>.</em></p>
+</section>
+</div>
+<p>For <code>patch</code>, pass the source path positionally. You can then use <code>path=</code> for the destination in the body. <code>delete</code> removes a file or an empty directory:</p>
+<div id="18ee14f8" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-09-15T21:38:52.624284+00:00&quot;,&quot;shell.execute_reply&quot;:&quot;2026-09-15T21:38:52.628076+00:00&quot;,&quot;total&quot;:0.0037959480000040458}}" data-execution_count="11">
+<hr>
+<p><a href="https://github.com/AnswerDotAI/jupyasyncclient/blob/main/jupyasyncclient/files.py#L57" target="_blank" style="float:right; font-size:smaller">source</a></p>
+<section id="jupyasyncfilesclient.delete" class="level3">
+<h3 class="anchored" data-anchor-id="jupyasyncfilesclient.delete">JupyAsyncFilesClient.delete</h3>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb6"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="cf">async</span> <span class="kw">def</span> delete(</span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>    path</span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>):</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p><em>Delete a file or an empty directory.</em></p>
+</section>
+</div>
+<div id="13724d10" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-09-15T21:38:52.628215+00:00&quot;,&quot;shell.execute_reply&quot;:&quot;2026-09-15T21:38:52.632166+00:00&quot;,&quot;total&quot;:0.003954193999987865}}" data-execution_count="12">
+<hr>
+<p><a href="https://github.com/AnswerDotAI/jupyasyncclient/blob/main/jupyasyncclient/files.py#L52" target="_blank" style="float:right; font-size:smaller">source</a></p>
+<section id="jupyasyncfilesclient.patch" class="level3">
+<h3 class="anchored" data-anchor-id="jupyasyncfilesclient.patch">JupyAsyncFilesClient.patch</h3>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb7"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="cf">async</span> <span class="kw">def</span> patch(</span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>    path, <span class="op">/</span>, <span class="op">**</span>kwargs</span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>):</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p><em>PATCH with <code>kwargs</code> as the JSON body; <code>path</code> is positional-only, freeing the name for the body.</em></p>
+</section>
+</div>
+<div id="4de0ca8d" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-09-15T21:38:52.635056+00:00&quot;,&quot;shell.execute_reply&quot;:&quot;2026-09-15T21:38:52.638851+00:00&quot;,&quot;total&quot;:0.0037982619999752387}}" data-execution_count="14">
+<hr>
+<p><a href="https://github.com/AnswerDotAI/jupyasyncclient/blob/main/jupyasyncclient/files.py#L75" target="_blank" style="float:right; font-size:smaller">source</a></p>
+<section id="jupyasyncfilesclient.listing" class="level3">
+<h3 class="anchored" data-anchor-id="jupyasyncfilesclient.listing">JupyAsyncFilesClient.listing</h3>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb8"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="cf">async</span> <span class="kw">def</span> listing(</span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>    path:<span class="bu">str</span><span class="op">=</span><span class="st">''</span></span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>):</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p><em>The entries of directory <code>path</code>.</em></p>
+</section>
+</div>
+<div id="995c64df" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-09-15T21:38:52.638983+00:00&quot;,&quot;shell.execute_reply&quot;:&quot;2026-09-15T21:38:52.642892+00:00&quot;,&quot;total&quot;:0.0039124349999895}}" data-execution_count="15">
+<hr>
+<p><a href="https://github.com/AnswerDotAI/jupyasyncclient/blob/main/jupyasyncclient/files.py#L69" target="_blank" style="float:right; font-size:smaller">source</a></p>
+<section id="jupyasyncfilesclient.read" class="level3">
+<h3 class="anchored" data-anchor-id="jupyasyncfilesclient.read">JupyAsyncFilesClient.read</h3>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb9"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="cf">async</span> <span class="kw">def</span> read(</span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>    path</span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>):</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p><em>A file’s contents: <code>str</code> for text, <code>bytes</code> for binary.</em></p>
+</section>
+</div>
+<div id="ce825bd4" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-09-15T21:38:52.643025+00:00&quot;,&quot;shell.execute_reply&quot;:&quot;2026-09-15T21:38:52.647216+00:00&quot;,&quot;total&quot;:0.004193641000000525}}" data-execution_count="16">
+<hr>
+<p><a href="https://github.com/AnswerDotAI/jupyasyncclient/blob/main/jupyasyncclient/files.py#L63" target="_blank" style="float:right; font-size:smaller">source</a></p>
+<section id="jupyasyncfilesclient.write" class="level3">
+<h3 class="anchored" data-anchor-id="jupyasyncfilesclient.write">JupyAsyncFilesClient.write</h3>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb10"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="cf">async</span> <span class="kw">def</span> write(</span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>    path, content, unique:<span class="bu">bool</span><span class="op">=</span><span class="va">False</span>, overwrite:<span class="bu">bool</span><span class="op">=</span><span class="va">True</span></span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a>):</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p><em>Write text or base64-encoded bytes and return the model. <code>unique</code> chooses a free <code>name_n.ext</code>; <code>overwrite=False</code> requires a new file.</em></p>
+</section>
+</div>
+<p>Let’s start a local rustygate process with a temporary directory as its files root. All the following writes stay in that directory:</p>
+<div id="4c83c5fa" class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb11"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>root <span class="op">=</span> Path(tempfile.mkdtemp())</span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>g <span class="op">=</span> start_gateway((<span class="st">'rustygate'</span>, <span class="st">'--root'</span>, root))</span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a>fc <span class="op">=</span> JupyAsyncFilesClient(g.url)</span>
+<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a>m <span class="op">=</span> <span class="cf">await</span> fc.write(<span class="st">'notes.txt'</span>, <span class="st">'hello'</span>)</span>
+<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a>m</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-display cell-output-markdown">
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb12"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a>{ <span class="st">'mtime'</span>: <span class="fl">1789266815.6835597</span>,</span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a>  <span class="st">'name'</span>: <span class="st">'notes.txt'</span>,</span>
+<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a>  <span class="st">'path'</span>: <span class="st">'notes.txt'</span>,</span>
+<span id="cb12-4"><a href="#cb12-4" aria-hidden="true" tabindex="-1"></a>  <span class="st">'size'</span>: <span class="dv">5</span>,</span>
+<span id="cb12-5"><a href="#cb12-5" aria-hidden="true" tabindex="-1"></a>  <span class="st">'type'</span>: <span class="st">'file'</span>,</span>
+<span id="cb12-6"><a href="#cb12-6" aria-hidden="true" tabindex="-1"></a>  <span class="st">'writable'</span>: <span class="va">True</span>}</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+</div>
+<p><code>write</code> returns the file model. Directory listings return those same stat fields without reading file contents:</p>
+<div id="6f08c6d7" class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb13"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a>test_eq(<span class="cf">await</span> fc.read(<span class="st">'notes.txt'</span>), <span class="st">'hello'</span>)</span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a>entry <span class="op">=</span> <span class="bu">next</span>(e <span class="cf">for</span> e <span class="kw">in</span> <span class="cf">await</span> fc.listing() <span class="cf">if</span> e[<span class="st">'name'</span>]<span class="op">==</span><span class="st">'notes.txt'</span>)</span>
+<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a>test_eq(entry, m)</span>
+<span id="cb13-4"><a href="#cb13-4" aria-hidden="true" tabindex="-1"></a>entry</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-display cell-output-markdown">
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb14"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a>{ <span class="st">'mtime'</span>: <span class="fl">1789266815.6835597</span>,</span>
+<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a>  <span class="st">'name'</span>: <span class="st">'notes.txt'</span>,</span>
+<span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a>  <span class="st">'path'</span>: <span class="st">'notes.txt'</span>,</span>
+<span id="cb14-4"><a href="#cb14-4" aria-hidden="true" tabindex="-1"></a>  <span class="st">'size'</span>: <span class="dv">5</span>,</span>
+<span id="cb14-5"><a href="#cb14-5" aria-hidden="true" tabindex="-1"></a>  <span class="st">'type'</span>: <span class="st">'file'</span>,</span>
+<span id="cb14-6"><a href="#cb14-6" aria-hidden="true" tabindex="-1"></a>  <span class="st">'writable'</span>: <span class="va">True</span>}</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+</div>
+<p>Writing an existing file replaces its contents:</p>
+<div id="f121c878" class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb15"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a><span class="cf">await</span> fc.write(<span class="st">'notes.txt'</span>, <span class="st">'hello2'</span>)</span>
+<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a>test_eq(<span class="cf">await</span> fc.read(<span class="st">'notes.txt'</span>), <span class="st">'hello2'</span>)</span>
+<span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a><span class="cf">await</span> fc.read(<span class="st">'notes.txt'</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-display">
+<pre><code>'hello2'</code></pre>
+</div>
+</div>
+<p>Pass <code>overwrite=False</code> to require a new file. An existing path raises <code>APIError</code> with status 409 and keeps its content:</p>
+<div id="cebd3e98" class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb17"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a><span class="cf">await</span> fc.write(<span class="st">'fresh.txt'</span>, <span class="st">'made'</span>, overwrite<span class="op">=</span><span class="va">False</span>)</span>
+<span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a><span class="cf">with</span> expect_fail(APIError): <span class="cf">await</span> fc.write(<span class="st">'fresh.txt'</span>, <span class="st">'again'</span>, overwrite<span class="op">=</span><span class="va">False</span>)</span>
+<span id="cb17-3"><a href="#cb17-3" aria-hidden="true" tabindex="-1"></a>test_eq(<span class="cf">await</span> fc.read(<span class="st">'fresh.txt'</span>), <span class="st">'made'</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<p><code>write</code> base64-encodes bytes for transport. <code>read</code> returns text when the stored bytes are valid UTF-8, otherwise bytes. Here the binary data round-trips unchanged:</p>
+<div id="8c224679" class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb18"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a>raw <span class="op">=</span> <span class="bu">bytes</span>(<span class="bu">range</span>(<span class="dv">256</span>))</span>
+<span id="cb18-2"><a href="#cb18-2" aria-hidden="true" tabindex="-1"></a><span class="cf">await</span> fc.write(<span class="st">'blob.bin'</span>, raw)</span>
+<span id="cb18-3"><a href="#cb18-3" aria-hidden="true" tabindex="-1"></a>back <span class="op">=</span> <span class="cf">await</span> fc.read(<span class="st">'blob.bin'</span>)</span>
+<span id="cb18-4"><a href="#cb18-4" aria-hidden="true" tabindex="-1"></a>test_eq(back, raw)</span>
+<span id="cb18-5"><a href="#cb18-5" aria-hidden="true" tabindex="-1"></a><span class="bu">len</span>(back)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-display">
+<pre><code>256</code></pre>
+</div>
+</div>
+<p><code>mkdir</code>, <code>rename</code>, and <code>copy</code> wrap the contents methods. Use <code>parents=True</code> to create missing directory ancestors.</p>
+<p>A rename never overwrites an existing destination: it raises <code>APIError</code> with status 409. To replace a destination, delete it explicitly first:</p>
+<div id="433f43f7" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-09-15T21:38:52.650060+00:00&quot;,&quot;shell.execute_reply&quot;:&quot;2026-09-15T21:38:52.653945+00:00&quot;,&quot;total&quot;:0.003887098000006972}}" data-execution_count="18">
+<hr>
+<p><a href="https://github.com/AnswerDotAI/jupyasyncclient/blob/main/jupyasyncclient/files.py#L92" target="_blank" style="float:right; font-size:smaller">source</a></p>
+<section id="jupyasyncfilesclient.copy" class="level3">
+<h3 class="anchored" data-anchor-id="jupyasyncfilesclient.copy">JupyAsyncFilesClient.copy</h3>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb20"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a><span class="cf">async</span> <span class="kw">def</span> copy(</span>
+<span id="cb20-2"><a href="#cb20-2" aria-hidden="true" tabindex="-1"></a>    src, to, unique:<span class="bu">bool</span><span class="op">=</span><span class="va">False</span>, overwrite:<span class="bu">bool</span><span class="op">=</span><span class="va">True</span></span>
+<span id="cb20-3"><a href="#cb20-3" aria-hidden="true" tabindex="-1"></a>):</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p><em>Copy and return the new model. <code>unique</code> chooses a free <code>name_n.ext</code>; <code>overwrite=False</code> requires a new file.</em></p>
+</section>
+</div>
+<div id="5b62e05b" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-09-15T21:38:52.654043+00:00&quot;,&quot;shell.execute_reply&quot;:&quot;2026-09-15T21:38:52.657468+00:00&quot;,&quot;total&quot;:0.003426636999989796}}" data-execution_count="19">
+<hr>
+<p><a href="https://github.com/AnswerDotAI/jupyasyncclient/blob/main/jupyasyncclient/files.py#L87" target="_blank" style="float:right; font-size:smaller">source</a></p>
+<section id="jupyasyncfilesclient.rename" class="level3">
+<h3 class="anchored" data-anchor-id="jupyasyncfilesclient.rename">JupyAsyncFilesClient.rename</h3>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb21"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a><span class="cf">async</span> <span class="kw">def</span> rename(</span>
+<span id="cb21-2"><a href="#cb21-2" aria-hidden="true" tabindex="-1"></a>    path, to</span>
+<span id="cb21-3"><a href="#cb21-3" aria-hidden="true" tabindex="-1"></a>):</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p><em>Rename and return the new model. An existing destination raises APIError (409); it is never overwritten.</em></p>
+</section>
+</div>
+<div id="51c5db7d" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-09-15T21:38:52.657566+00:00&quot;,&quot;shell.execute_reply&quot;:&quot;2026-09-15T21:38:52.661394+00:00&quot;,&quot;total&quot;:0.0038320150000004105}}" data-execution_count="20">
+<hr>
+<p><a href="https://github.com/AnswerDotAI/jupyasyncclient/blob/main/jupyasyncclient/files.py#L82" target="_blank" style="float:right; font-size:smaller">source</a></p>
+<section id="jupyasyncfilesclient.mkdir" class="level3">
+<h3 class="anchored" data-anchor-id="jupyasyncfilesclient.mkdir">JupyAsyncFilesClient.mkdir</h3>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb22"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb22-1"><a href="#cb22-1" aria-hidden="true" tabindex="-1"></a><span class="cf">async</span> <span class="kw">def</span> mkdir(</span>
+<span id="cb22-2"><a href="#cb22-2" aria-hidden="true" tabindex="-1"></a>    path, parents:<span class="bu">bool</span><span class="op">=</span><span class="va">False</span></span>
+<span id="cb22-3"><a href="#cb22-3" aria-hidden="true" tabindex="-1"></a>):</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p><em>Create directory <code>path</code>; <code>parents</code> creates missing ancestors like <code>mkdir -p</code>.</em></p>
+</section>
+</div>
+<div id="59bcfea1" class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb23"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a><span class="cf">await</span> fc.mkdir(<span class="st">'sub'</span>)</span>
+<span id="cb23-2"><a href="#cb23-2" aria-hidden="true" tabindex="-1"></a><span class="cf">await</span> fc.mkdir(<span class="st">'deep/a/b'</span>, parents<span class="op">=</span><span class="va">True</span>)</span>
+<span id="cb23-3"><a href="#cb23-3" aria-hidden="true" tabindex="-1"></a><span class="cf">await</span> fc.copy(<span class="st">'notes.txt'</span>, <span class="st">'sub/notes.txt'</span>)</span>
+<span id="cb23-4"><a href="#cb23-4" aria-hidden="true" tabindex="-1"></a><span class="cf">await</span> fc.rename(<span class="st">'sub/notes.txt'</span>, <span class="st">'sub/renamed.txt'</span>)</span>
+<span id="cb23-5"><a href="#cb23-5" aria-hidden="true" tabindex="-1"></a><span class="cf">with</span> expect_fail(APIError): <span class="cf">await</span> fc.rename(<span class="st">'sub/renamed.txt'</span>, <span class="st">'notes.txt'</span>)</span>
+<span id="cb23-6"><a href="#cb23-6" aria-hidden="true" tabindex="-1"></a>test_eq([e[<span class="st">'name'</span>] <span class="cf">for</span> e <span class="kw">in</span> <span class="cf">await</span> fc.listing(<span class="st">'sub'</span>)], [<span class="st">'renamed.txt'</span>])</span>
+<span id="cb23-7"><a href="#cb23-7" aria-hidden="true" tabindex="-1"></a><span class="cf">await</span> fc.delete(<span class="st">'sub/renamed.txt'</span>)</span>
+<span id="cb23-8"><a href="#cb23-8" aria-hidden="true" tabindex="-1"></a><span class="cf">await</span> fc.delete(<span class="st">'sub'</span>)</span>
+<span id="cb23-9"><a href="#cb23-9" aria-hidden="true" tabindex="-1"></a><span class="cf">await</span> fc.delete(<span class="st">'blob.bin'</span>)</span>
+<span id="cb23-10"><a href="#cb23-10" aria-hidden="true" tabindex="-1"></a>[e[<span class="st">'name'</span>] <span class="cf">for</span> e <span class="kw">in</span> <span class="cf">await</span> fc.listing()]</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-display">
+<pre><code>['deep', 'fresh.txt', 'notes.txt']</code></pre>
+</div>
+</div>
+<p><code>search</code> returns <code>/api/search</code> results as <code>{'paths', 'complete'}</code>. It can search file names or content. With <code>up</code>, it searches ancestors for the nearest matching entry, such as <code>.git</code>, a project file, or a per-directory configuration file:</p>
+<div id="6943208a" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-09-15T21:38:52.663091+00:00&quot;,&quot;shell.execute_reply&quot;:&quot;2026-09-15T21:38:52.666499+00:00&quot;,&quot;total&quot;:0.0034105169999918417}}" data-execution_count="22">
+<hr>
+<p><a href="https://github.com/AnswerDotAI/jupyasyncclient/blob/main/jupyasyncclient/files.py#L98" target="_blank" style="float:right; font-size:smaller">source</a></p>
+<section id="jupyasyncfilesclient.search" class="level3">
+<h3 class="anchored" data-anchor-id="jupyasyncfilesclient.search">JupyAsyncFilesClient.search</h3>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb25"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb25-1"><a href="#cb25-1" aria-hidden="true" tabindex="-1"></a><span class="cf">async</span> <span class="kw">def</span> search(</span>
+<span id="cb25-2"><a href="#cb25-2" aria-hidden="true" tabindex="-1"></a>    path:<span class="bu">str</span><span class="op">=</span><span class="st">''</span>, <span class="op">**</span>kwargs</span>
+<span id="cb25-3"><a href="#cb25-3" aria-hidden="true" tabindex="-1"></a>):</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p><em>The <code>/api/search</code> result for directory <code>path</code>: <code>kwargs</code> are its query parameters (<code>q</code>, <code>up</code>, <code>glob</code>, …), documented in rustygate’s DEV.md</em></p>
+</section>
+</div>
+<div id="10784d3f" class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb26"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb26-1"><a href="#cb26-1" aria-hidden="true" tabindex="-1"></a>test_eq((<span class="cf">await</span> fc.search(path<span class="op">=</span><span class="st">'deep/a/b'</span>, up<span class="op">=</span><span class="st">'notes.txt'</span>))[<span class="st">'paths'</span>], [<span class="st">'notes.txt'</span>])</span>
+<span id="cb26-2"><a href="#cb26-2" aria-hidden="true" tabindex="-1"></a><span class="cf">await</span> fc.search(glob<span class="op">=</span><span class="st">'*.txt'</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-display cell-output-markdown">
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb27"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb27-1"><a href="#cb27-1" aria-hidden="true" tabindex="-1"></a>{<span class="st">'complete'</span>: <span class="va">True</span>, <span class="st">'paths'</span>: [<span class="st">'fresh.txt'</span>, <span class="st">'notes.txt'</span>]}</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+</div>
+<p>Pass <code>unique=True</code> to write or copy under the first free <code>name_n.ext</code> instead of overwriting. The response contains the final name and path:</p>
+<div id="ef09ac70" class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb28"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb28-1"><a href="#cb28-1" aria-hidden="true" tabindex="-1"></a>m3 <span class="op">=</span> <span class="cf">await</span> fc.write(<span class="st">'notes.txt'</span>, <span class="st">'variant'</span>, unique<span class="op">=</span><span class="va">True</span>)</span>
+<span id="cb28-2"><a href="#cb28-2" aria-hidden="true" tabindex="-1"></a>test_eq(m3[<span class="st">'name'</span>], <span class="st">'notes_1.txt'</span>)</span>
+<span id="cb28-3"><a href="#cb28-3" aria-hidden="true" tabindex="-1"></a>m4 <span class="op">=</span> <span class="cf">await</span> fc.copy(<span class="st">'notes.txt'</span>, <span class="st">'notes.txt'</span>, unique<span class="op">=</span><span class="va">True</span>)</span>
+<span id="cb28-4"><a href="#cb28-4" aria-hidden="true" tabindex="-1"></a>test_eq(m4[<span class="st">'name'</span>], <span class="st">'notes_2.txt'</span>)</span>
+<span id="cb28-5"><a href="#cb28-5" aria-hidden="true" tabindex="-1"></a>test_eq(<span class="cf">await</span> fc.read(<span class="st">'notes_2.txt'</span>), <span class="cf">await</span> fc.read(<span class="st">'notes.txt'</span>))</span>
+<span id="cb28-6"><a href="#cb28-6" aria-hidden="true" tabindex="-1"></a>m4[<span class="st">'path'</span>]</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-display">
+<pre><code>'notes_2.txt'</code></pre>
+</div>
+</div>
+<p>Use <code>edit</code> to change a JSON file. It reads the content, calls <code>f</code> to modify the parsed object in place, and writes the result once. Like any file write, it replaces intervening changes:</p>
+<div id="9d38638e" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-09-15T21:38:52.668282+00:00&quot;,&quot;shell.execute_reply&quot;:&quot;2026-09-15T21:38:52.671639+00:00&quot;,&quot;total&quot;:0.0033592209999824263}}" data-execution_count="24">
+<hr>
+<p><a href="https://github.com/AnswerDotAI/jupyasyncclient/blob/main/jupyasyncclient/files.py#L104" target="_blank" style="float:right; font-size:smaller">source</a></p>
+<section id="jupyasyncfilesclient.edit" class="level3">
+<h3 class="anchored" data-anchor-id="jupyasyncfilesclient.edit">JupyAsyncFilesClient.edit</h3>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb30"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb30-1"><a href="#cb30-1" aria-hidden="true" tabindex="-1"></a><span class="cf">async</span> <span class="kw">def</span> edit(</span>
+<span id="cb30-2"><a href="#cb30-2" aria-hidden="true" tabindex="-1"></a>    path, f</span>
+<span id="cb30-3"><a href="#cb30-3" aria-hidden="true" tabindex="-1"></a>):</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p><em>Read the JSON file at <code>path</code>, apply <code>f</code> to the parsed object, and write it back.</em></p>
+</section>
+</div>
+<div id="54fbd22e" class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb31"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb31-1"><a href="#cb31-1" aria-hidden="true" tabindex="-1"></a><span class="cf">await</span> fc.write(<span class="st">'cfg.json'</span>, json.dumps(<span class="bu">dict</span>(a<span class="op">=</span><span class="dv">1</span>)))</span>
+<span id="cb31-2"><a href="#cb31-2" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> _bump(o): o[<span class="st">'a'</span>] <span class="op">+=</span> <span class="dv">1</span></span>
+<span id="cb31-3"><a href="#cb31-3" aria-hidden="true" tabindex="-1"></a><span class="cf">await</span> fc.edit(<span class="st">'cfg.json'</span>, _bump)</span>
+<span id="cb31-4"><a href="#cb31-4" aria-hidden="true" tabindex="-1"></a>test_eq(json.loads(<span class="cf">await</span> fc.read(<span class="st">'cfg.json'</span>))[<span class="st">'a'</span>], <span class="dv">2</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+</section>
+<section id="the-cells-client" class="level2">
+<h2 class="anchored" data-anchor-id="the-cells-client">The cells client</h2>
+<p>Construct <a href="https://AnswerDotAI.github.io/jupyasyncclient/files.html#jupyasynccellsclient"><code>JupyAsyncCellsClient</code></a> with a notebook path or <code>kernel_id</code>. Kernel-addressed cell operations follow the current binding through rename and restart. Inherited file methods still take explicit paths.</p>
+<p><code>view</code> returns the selected <code>cells</code> with their notebook <code>path</code>. Pass <code>fields='meta'</code> to include notebook <code>metadata</code>. <code>cells</code> returns the selected cell list.</p>
+<p><code>await client[id]</code> returns one cell; a tuple of ids returns a list.</p>
+<div id="4fe29b5d" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-09-15T21:38:52.673685+00:00&quot;,&quot;shell.execute_reply&quot;:&quot;2026-09-15T21:38:52.677835+00:00&quot;,&quot;total&quot;:0.004152034000014737}}" data-execution_count="26">
+<hr>
+<p><a href="https://github.com/AnswerDotAI/jupyasyncclient/blob/main/jupyasyncclient/files.py#L111" target="_blank" style="float:right; font-size:smaller">source</a></p>
+<section id="jupyasynccellsclient" class="level3">
+<h3 class="anchored" data-anchor-id="jupyasynccellsclient">JupyAsyncCellsClient</h3>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb32"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb32-1"><a href="#cb32-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> JupyAsyncCellsClient(</span>
+<span id="cb32-2"><a href="#cb32-2" aria-hidden="true" tabindex="-1"></a>    base_url, path:NoneType<span class="op">=</span><span class="va">None</span>, token:NoneType<span class="op">=</span><span class="va">None</span>, headers:NoneType<span class="op">=</span><span class="va">None</span>, timeout:<span class="bu">int</span><span class="op">=</span><span class="dv">30</span>,</span>
+<span id="cb32-3"><a href="#cb32-3" aria-hidden="true" tabindex="-1"></a>    http_client:NoneType<span class="op">=</span><span class="va">None</span>, verify:<span class="bu">bool</span><span class="op">=</span><span class="va">True</span>, kernel_id:NoneType<span class="op">=</span><span class="va">None</span></span>
+<span id="cb32-4"><a href="#cb32-4" aria-hidden="true" tabindex="-1"></a>):</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p><em>One notebook’s cells over the gateway’s cells API.</em></p>
+</section>
+</div>
+<div id="e98c6e74" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-09-15T21:38:52.681344+00:00&quot;,&quot;shell.execute_reply&quot;:&quot;2026-09-15T21:38:52.686856+00:00&quot;,&quot;total&quot;:0.005514511000001221}}" data-execution_count="28">
+<hr>
+<p><a href="https://github.com/AnswerDotAI/jupyasyncclient/blob/main/jupyasyncclient/files.py#L150" target="_blank" style="float:right; font-size:smaller">source</a></p>
+<section id="jupyasynccellsclient.cells" class="level3">
+<h3 class="anchored" data-anchor-id="jupyasynccellsclient.cells">JupyAsyncCellsClient.cells</h3>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb33"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb33-1"><a href="#cb33-1" aria-hidden="true" tabindex="-1"></a><span class="cf">async</span> <span class="kw">def</span> cells(</span>
+<span id="cb33-2"><a href="#cb33-2" aria-hidden="true" tabindex="-1"></a>    ids:NoneType<span class="op">=</span><span class="va">None</span>, <span class="op">*</span>,</span>
+<span id="cb33-3"><a href="#cb33-3" aria-hidden="true" tabindex="-1"></a>    idx:NoneType<span class="op">=</span><span class="va">None</span>, <span class="co"># Cell positions to keep: comma-separated str, or a list of ints, 0-based, negative from the end; unions with `ids`</span></span>
+<span id="cb33-4"><a href="#cb33-4" aria-hidden="true" tabindex="-1"></a>    section:NoneType<span class="op">=</span><span class="va">None</span>, <span class="co"># Cell id selecting a heading and its descendants; a non-heading selects itself</span></span>
+<span id="cb33-5"><a href="#cb33-5" aria-hidden="true" tabindex="-1"></a>    ancestors:NoneType<span class="op">=</span><span class="va">None</span>, <span class="co"># Cell id whose enclosing headings to select, outermost first, excluding the cell itself</span></span>
+<span id="cb33-6"><a href="#cb33-6" aria-hidden="true" tabindex="-1"></a>    q:NoneType<span class="op">=</span><span class="va">None</span>, <span class="co"># Keep only cells whose source matches this regex (multiline, smart-case)</span></span>
+<span id="cb33-7"><a href="#cb33-7" aria-hidden="true" tabindex="-1"></a>    cell_type:NoneType<span class="op">=</span><span class="va">None</span>, <span class="co"># Keep only cells of this type: 'code', 'markdown', or 'raw'</span></span>
+<span id="cb33-8"><a href="#cb33-8" aria-hidden="true" tabindex="-1"></a>    meta:NoneType<span class="op">=</span><span class="va">None</span>, <span class="co"># Keep only cells whose metadata contains this dict as a recursive subset; a None value means "key present"</span></span>
+<span id="cb33-9"><a href="#cb33-9" aria-hidden="true" tabindex="-1"></a>    meta_not:NoneType<span class="op">=</span><span class="va">None</span>, <span class="co"># Drop cells whose metadata contains this dict as a recursive subset</span></span>
+<span id="cb33-10"><a href="#cb33-10" aria-hidden="true" tabindex="-1"></a>    limit:NoneType<span class="op">=</span><span class="va">None</span>, <span class="co"># Keep at most this many cells after filtering</span></span>
+<span id="cb33-11"><a href="#cb33-11" aria-hidden="true" tabindex="-1"></a>    context:NoneType<span class="op">=</span><span class="va">None</span>, <span class="co"># Also return this many neighbours either side of each kept cell; `matched` in the result names the true matches</span></span>
+<span id="cb33-12"><a href="#cb33-12" aria-hidden="true" tabindex="-1"></a>    fields:NoneType<span class="op">=</span><span class="va">None</span>, <span class="co"># Comma-separated cell fields; '*' includes attachments, 'meta' adds notebook metadata; None omits attachments</span></span>
+<span id="cb33-13"><a href="#cb33-13" aria-hidden="true" tabindex="-1"></a>):</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p><em>The selected cells in document order.</em></p>
+</section>
+</div>
+<div id="e0509c0e" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-09-15T21:38:52.686953+00:00&quot;,&quot;shell.execute_reply&quot;:&quot;2026-09-15T21:38:52.692147+00:00&quot;,&quot;total&quot;:0.0051976089999925534}}" data-execution_count="29">
+<hr>
+<p><a href="https://github.com/AnswerDotAI/jupyasyncclient/blob/main/jupyasyncclient/files.py#L127" target="_blank" style="float:right; font-size:smaller">source</a></p>
+<section id="jupyasynccellsclient.view" class="level3">
+<h3 class="anchored" data-anchor-id="jupyasynccellsclient.view">JupyAsyncCellsClient.view</h3>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb34"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb34-1"><a href="#cb34-1" aria-hidden="true" tabindex="-1"></a><span class="cf">async</span> <span class="kw">def</span> view(</span>
+<span id="cb34-2"><a href="#cb34-2" aria-hidden="true" tabindex="-1"></a>    ids:NoneType<span class="op">=</span><span class="va">None</span>, <span class="co"># Cell ids to keep: comma-separated str, or a list</span></span>
+<span id="cb34-3"><a href="#cb34-3" aria-hidden="true" tabindex="-1"></a>    idx:NoneType<span class="op">=</span><span class="va">None</span>, <span class="co"># Cell positions to keep: comma-separated str, or a list of ints, 0-based, negative from the end; unions with `ids`</span></span>
+<span id="cb34-4"><a href="#cb34-4" aria-hidden="true" tabindex="-1"></a>    section:NoneType<span class="op">=</span><span class="va">None</span>, <span class="co"># Cell id selecting a heading and its descendants; a non-heading selects itself</span></span>
+<span id="cb34-5"><a href="#cb34-5" aria-hidden="true" tabindex="-1"></a>    ancestors:NoneType<span class="op">=</span><span class="va">None</span>, <span class="co"># Cell id whose enclosing headings to select, outermost first, excluding the cell itself</span></span>
+<span id="cb34-6"><a href="#cb34-6" aria-hidden="true" tabindex="-1"></a>    q:NoneType<span class="op">=</span><span class="va">None</span>, <span class="co"># Keep only cells whose source matches this regex (multiline, smart-case)</span></span>
+<span id="cb34-7"><a href="#cb34-7" aria-hidden="true" tabindex="-1"></a>    cell_type:NoneType<span class="op">=</span><span class="va">None</span>, <span class="co"># Keep only cells of this type: 'code', 'markdown', or 'raw'</span></span>
+<span id="cb34-8"><a href="#cb34-8" aria-hidden="true" tabindex="-1"></a>    meta:NoneType<span class="op">=</span><span class="va">None</span>, <span class="co"># Keep only cells whose metadata contains this dict as a recursive subset; a None value means "key present"</span></span>
+<span id="cb34-9"><a href="#cb34-9" aria-hidden="true" tabindex="-1"></a>    meta_not:NoneType<span class="op">=</span><span class="va">None</span>, <span class="co"># Drop cells whose metadata contains this dict as a recursive subset</span></span>
+<span id="cb34-10"><a href="#cb34-10" aria-hidden="true" tabindex="-1"></a>    limit:NoneType<span class="op">=</span><span class="va">None</span>, <span class="co"># Keep at most this many cells after filtering</span></span>
+<span id="cb34-11"><a href="#cb34-11" aria-hidden="true" tabindex="-1"></a>    context:NoneType<span class="op">=</span><span class="va">None</span>, <span class="co"># Also return this many neighbours either side of each kept cell; `matched` in the result names the true matches</span></span>
+<span id="cb34-12"><a href="#cb34-12" aria-hidden="true" tabindex="-1"></a>    fields:NoneType<span class="op">=</span><span class="va">None</span>, <span class="co"># Comma-separated cell fields; '*' includes attachments, 'meta' adds notebook metadata; None omits attachments</span></span>
+<span id="cb34-13"><a href="#cb34-13" aria-hidden="true" tabindex="-1"></a>):</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p><em>The selected cells with their notebook path, requested metadata and matched ids.</em></p>
+</section>
+</div>
+<p><code>apply</code> submits operations in order and returns the added ids. <code>_lookup</code> implements the bracket notation:</p>
+<div id="f0a15114" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-09-15T21:38:52.694479+00:00&quot;,&quot;shell.execute_reply&quot;:&quot;2026-09-15T21:38:52.698589+00:00&quot;,&quot;total&quot;:0.0041141230000221185}}" data-execution_count="31">
+<hr>
+<p><a href="https://github.com/AnswerDotAI/jupyasyncclient/blob/main/jupyasyncclient/files.py#L157" target="_blank" style="float:right; font-size:smaller">source</a></p>
+<section id="jupyasynccellsclient.apply" class="level3">
+<h3 class="anchored" data-anchor-id="jupyasynccellsclient.apply">JupyAsyncCellsClient.apply</h3>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb35"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb35-1"><a href="#cb35-1" aria-hidden="true" tabindex="-1"></a><span class="cf">async</span> <span class="kw">def</span> <span class="bu">apply</span>(</span>
+<span id="cb35-2"><a href="#cb35-2" aria-hidden="true" tabindex="-1"></a>    ops</span>
+<span id="cb35-3"><a href="#cb35-3" aria-hidden="true" tabindex="-1"></a>):</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p><em>Apply <code>ops</code> in order, returning ids of added cells.</em></p>
+</section>
+</div>
+<p>We’ll create a notebook through the files client. Any nbformat producer can write the file. For an unbound notebook, the cells API reads it from disk. For a notebook bound to a kernel, the gateway serves its held state:</p>
+<div id="e0df3b1e" class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb36"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb36-1"><a href="#cb36-1" aria-hidden="true" tabindex="-1"></a>cells <span class="op">=</span> [<span class="bu">dict</span>(<span class="bu">id</span><span class="op">=</span><span class="st">'aaa1'</span>, cell_type<span class="op">=</span><span class="st">'code'</span>, source<span class="op">=</span><span class="st">'1+1'</span>, metadata<span class="op">=</span>{}, outputs<span class="op">=</span>[], execution_count<span class="op">=</span><span class="va">None</span>),</span>
+<span id="cb36-2"><a href="#cb36-2" aria-hidden="true" tabindex="-1"></a>    <span class="bu">dict</span>(<span class="bu">id</span><span class="op">=</span><span class="st">'bbb2'</span>, cell_type<span class="op">=</span><span class="st">'markdown'</span>, source<span class="op">=</span><span class="st">'# hi'</span>, metadata<span class="op">=</span>{})]</span>
+<span id="cb36-3"><a href="#cb36-3" aria-hidden="true" tabindex="-1"></a><span class="cf">await</span> fc.write(<span class="st">'d.ipynb'</span>, json.dumps(<span class="bu">dict</span>(nbformat<span class="op">=</span><span class="dv">4</span>, nbformat_minor<span class="op">=</span><span class="dv">5</span>, metadata<span class="op">=</span>{}, cells<span class="op">=</span>cells)))</span>
+<span id="cb36-4"><a href="#cb36-4" aria-hidden="true" tabindex="-1"></a>nb <span class="op">=</span> JupyAsyncCellsClient(g.url, <span class="st">'d.ipynb'</span>)</span>
+<span id="cb36-5"><a href="#cb36-5" aria-hidden="true" tabindex="-1"></a>[c[<span class="st">'id'</span>] <span class="cf">for</span> c <span class="kw">in</span> <span class="cf">await</span> nb.cells()]</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-display">
+<pre><code>['aaa1', 'bbb2']</code></pre>
+</div>
+</div>
+<p>Bracket lookup works like fastlite’s id lookup, with <code>await</code> for the request. A missing id raises <code>KeyError</code>. Multiple cells come back in document order:</p>
+<div id="794307f1" class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb38"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb38-1"><a href="#cb38-1" aria-hidden="true" tabindex="-1"></a>c <span class="op">=</span> <span class="cf">await</span> nb[<span class="st">'bbb2'</span>]</span>
+<span id="cb38-2"><a href="#cb38-2" aria-hidden="true" tabindex="-1"></a>test_eq(c[<span class="st">'source'</span>], <span class="st">'# hi'</span>)</span>
+<span id="cb38-3"><a href="#cb38-3" aria-hidden="true" tabindex="-1"></a>pair <span class="op">=</span> <span class="cf">await</span> nb[<span class="st">'aaa1'</span>,<span class="st">'bbb2'</span>]</span>
+<span id="cb38-4"><a href="#cb38-4" aria-hidden="true" tabindex="-1"></a>test_eq([c[<span class="st">'id'</span>] <span class="cf">for</span> c <span class="kw">in</span> pair], [<span class="st">'aaa1'</span>,<span class="st">'bbb2'</span>])</span>
+<span id="cb38-5"><a href="#cb38-5" aria-hidden="true" tabindex="-1"></a><span class="cf">try</span>: <span class="cf">await</span> nb[<span class="st">'nope'</span>]</span>
+<span id="cb38-6"><a href="#cb38-6" aria-hidden="true" tabindex="-1"></a><span class="cf">except</span> <span class="pp">KeyError</span> <span class="im">as</span> e: err <span class="op">=</span> <span class="bu">str</span>(e)</span>
+<span id="cb38-7"><a href="#cb38-7" aria-hidden="true" tabindex="-1"></a>err</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-display">
+<pre><code>"'nope'"</code></pre>
+</div>
+</div>
+<p>The server fills in omitted defaults for a sparse <code>add</code> and returns added ids in operation order. An <code>update</code> replaces the fields you supply rather than merging their contents. Operations are applied in order, without rollback of earlier operations if a later one fails:</p>
+<div id="3be85498" class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb40"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb40-1"><a href="#cb40-1" aria-hidden="true" tabindex="-1"></a>added <span class="op">=</span> <span class="cf">await</span> nb.<span class="bu">apply</span>([</span>
+<span id="cb40-2"><a href="#cb40-2" aria-hidden="true" tabindex="-1"></a>    <span class="bu">dict</span>(op<span class="op">=</span><span class="st">'add'</span>, cell<span class="op">=</span><span class="bu">dict</span>(cell_type<span class="op">=</span><span class="st">'code'</span>, source<span class="op">=</span><span class="st">'2+2'</span>), after<span class="op">=</span><span class="st">'aaa1'</span>),</span>
+<span id="cb40-3"><a href="#cb40-3" aria-hidden="true" tabindex="-1"></a>    <span class="bu">dict</span>(op<span class="op">=</span><span class="st">'update'</span>, <span class="bu">id</span><span class="op">=</span><span class="st">'bbb2'</span>, source<span class="op">=</span><span class="st">'# hello'</span>),</span>
+<span id="cb40-4"><a href="#cb40-4" aria-hidden="true" tabindex="-1"></a>])</span>
+<span id="cb40-5"><a href="#cb40-5" aria-hidden="true" tabindex="-1"></a>new_id, <span class="op">=</span> added</span>
+<span id="cb40-6"><a href="#cb40-6" aria-hidden="true" tabindex="-1"></a>[c[<span class="st">'id'</span>] <span class="cf">for</span> c <span class="kw">in</span> <span class="cf">await</span> nb.cells()]</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-display">
+<pre><code>['aaa1', '97270c84', 'bbb2']</code></pre>
+</div>
+</div>
+<p>The cells API cannot edit an unbound file that doesn’t parse as a notebook: it raises <code>APIError</code> with status 409. Deleting a kernel-bound path also returns 409: shut down the kernel before deleting its file.</p>
+<div id="729ba93a" class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb42"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb42-1"><a href="#cb42-1" aria-hidden="true" tabindex="-1"></a><span class="cf">await</span> fc.write(<span class="st">'junk.ipynb'</span>, <span class="st">'{not json'</span>)</span>
+<span id="cb42-2"><a href="#cb42-2" aria-hidden="true" tabindex="-1"></a>bad <span class="op">=</span> JupyAsyncCellsClient(g.url, <span class="st">'junk.ipynb'</span>)</span>
+<span id="cb42-3"><a href="#cb42-3" aria-hidden="true" tabindex="-1"></a><span class="cf">try</span>: <span class="cf">await</span> bad.<span class="bu">apply</span>([<span class="bu">dict</span>(op<span class="op">=</span><span class="st">'update'</span>, <span class="bu">id</span><span class="op">=</span><span class="st">'aaa1'</span>, source<span class="op">=</span><span class="st">'x'</span>)])</span>
+<span id="cb42-4"><a href="#cb42-4" aria-hidden="true" tabindex="-1"></a><span class="cf">except</span> APIError <span class="im">as</span> e: code <span class="op">=</span> e.status_code</span>
+<span id="cb42-5"><a href="#cb42-5" aria-hidden="true" tabindex="-1"></a>test_eq(code, <span class="dv">409</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+</section>
+<section id="applying-ops" class="level2">
+<h2 class="anchored" data-anchor-id="applying-ops">Applying ops</h2>
+<p><a href="https://AnswerDotAI.github.io/jupyasyncclient/files.html#apply_ops"><code>apply_ops</code></a> updates a list of cell dictionaries in place from broadcast operations. A client can keep its local view current without fetching the notebook after each change.</p>
+<p>The gateway converts richer request operations, such as cell metadata <code>merge</code>, into add/update/delete broadcasts containing their results. Notebook-level <code>meta</code> leaves the cell list unchanged. Handle file-level <code>rename</code> and attachment events separately; passing them to this helper raises <code>ValueError</code>.</p>
+<div id="f68cc2a1" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-09-15T21:38:52.703697+00:00&quot;,&quot;shell.execute_reply&quot;:&quot;2026-09-15T21:38:52.707456+00:00&quot;,&quot;total&quot;:0.003762261999980865}}" data-execution_count="34">
+<hr>
+<p><a href="https://github.com/AnswerDotAI/jupyasyncclient/blob/main/jupyasyncclient/files.py#L182" target="_blank" style="float:right; font-size:smaller">source</a></p>
+<section id="apply_ops" class="level3">
+<h3 class="anchored" data-anchor-id="apply_ops">apply_ops</h3>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb43"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb43-1"><a href="#cb43-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> apply_ops(</span>
+<span id="cb43-2"><a href="#cb43-2" aria-hidden="true" tabindex="-1"></a>    cells, ops</span>
+<span id="cb43-3"><a href="#cb43-3" aria-hidden="true" tabindex="-1"></a>):</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p><em>Apply cell broadcast operations in order to <code>cells</code> in place and return that list.</em></p>
+</section>
+</div>
+<p>Here we add a code cell, delete another cell, and turn the new cell into a Markdown heading. The type change removes its execution count and outputs. <code>ancestors</code> selects the enclosing headings of a cell. <code>section</code> selects a heading and its descendants. <code>fields='id'</code> returns just the IDs in cell dictionaries:</p>
+<div id="e791794d" class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb44"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb44-1"><a href="#cb44-1" aria-hidden="true" tabindex="-1"></a>view <span class="op">=</span> <span class="cf">await</span> nb.cells()</span>
+<span id="cb44-2"><a href="#cb44-2" aria-hidden="true" tabindex="-1"></a>ops <span class="op">=</span> [<span class="bu">dict</span>(op<span class="op">=</span><span class="st">'add'</span>, cell<span class="op">=</span><span class="bu">dict</span>(<span class="bu">id</span><span class="op">=</span><span class="st">'ccc3'</span>, cell_type<span class="op">=</span><span class="st">'code'</span>, source<span class="op">=</span><span class="st">'3'</span>, metadata<span class="op">=</span>{}, outputs<span class="op">=</span>[], execution_count<span class="op">=</span><span class="va">None</span>), before<span class="op">=</span><span class="st">'aaa1'</span>),</span>
+<span id="cb44-3"><a href="#cb44-3" aria-hidden="true" tabindex="-1"></a>    <span class="bu">dict</span>(op<span class="op">=</span><span class="st">'delete'</span>, <span class="bu">id</span><span class="op">=</span><span class="st">'bbb2'</span>), <span class="bu">dict</span>(op<span class="op">=</span><span class="st">'update'</span>, <span class="bu">id</span><span class="op">=</span><span class="st">'ccc3'</span>, cell_type<span class="op">=</span><span class="st">'markdown'</span>, source<span class="op">=</span><span class="st">'# Calculation'</span>)]</span>
+<span id="cb44-4"><a href="#cb44-4" aria-hidden="true" tabindex="-1"></a><span class="cf">await</span> nb.<span class="bu">apply</span>(ops)</span>
+<span id="cb44-5"><a href="#cb44-5" aria-hidden="true" tabindex="-1"></a>apply_ops(view, ops)</span>
+<span id="cb44-6"><a href="#cb44-6" aria-hidden="true" tabindex="-1"></a>test_eq(view, <span class="cf">await</span> nb.cells())</span>
+<span id="cb44-7"><a href="#cb44-7" aria-hidden="true" tabindex="-1"></a>test_eq(<span class="cf">await</span> nb.cells(ancestors<span class="op">=</span><span class="st">'aaa1'</span>, fields<span class="op">=</span><span class="st">'id'</span>), [<span class="bu">dict</span>(<span class="bu">id</span><span class="op">=</span><span class="st">'ccc3'</span>)])</span>
+<span id="cb44-8"><a href="#cb44-8" aria-hidden="true" tabindex="-1"></a>test_eq(<span class="cf">await</span> nb.cells(section<span class="op">=</span><span class="st">'ccc3'</span>, cell_type<span class="op">=</span><span class="st">'code'</span>, fields<span class="op">=</span><span class="st">'id'</span>), [<span class="bu">dict</span>(<span class="bu">id</span><span class="op">=</span><span class="st">'aaa1'</span>), <span class="bu">dict</span>(<span class="bu">id</span><span class="op">=</span>new_id)])</span>
+<span id="cb44-9"><a href="#cb44-9" aria-hidden="true" tabindex="-1"></a>[(c[<span class="st">'id'</span>], c[<span class="st">'cell_type'</span>]) <span class="cf">for</span> c <span class="kw">in</span> view]</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-display">
+<pre><code>[('ccc3', 'markdown'), ('aaa1', 'code'), ('97270c84', 'code')]</code></pre>
+</div>
+</div>
+<p>Cell operations tolerate missing and duplicate ids in these cases:</p>
+<ul>
+<li>Updating a missing id adds the cell at the end. Defaults include <code>cell_type='code'</code>, empty metadata, and, for code cells, empty outputs and a null execution count.</li>
+<li>Adding an existing id updates that cell in place and ignores the anchor.</li>
+<li>Adding relative to a missing anchor appends the cell.</li>
+<li>Deleting a missing id has no effect.</li>
+</ul>
+<p>These rules do not make malformed operations valid. Here the duplicate add turns <code>ccc3</code> back into code. Its outputs start empty and its execution count is null. The local result matches the server:</p>
+<div id="b159b13a" class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb46"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb46-1"><a href="#cb46-1" aria-hidden="true" tabindex="-1"></a>ops <span class="op">=</span> [<span class="bu">dict</span>(op<span class="op">=</span><span class="st">'update'</span>, <span class="bu">id</span><span class="op">=</span><span class="st">'zzz9'</span>, source<span class="op">=</span><span class="st">'9'</span>), <span class="bu">dict</span>(op<span class="op">=</span><span class="st">'delete'</span>, <span class="bu">id</span><span class="op">=</span><span class="st">'zzz8'</span>),</span>
+<span id="cb46-2"><a href="#cb46-2" aria-hidden="true" tabindex="-1"></a>    <span class="bu">dict</span>(op<span class="op">=</span><span class="st">'add'</span>, cell<span class="op">=</span><span class="bu">dict</span>(<span class="bu">id</span><span class="op">=</span><span class="st">'ccc3'</span>, cell_type<span class="op">=</span><span class="st">'code'</span>, source<span class="op">=</span><span class="st">'3b'</span>), after<span class="op">=</span><span class="st">'ggg7'</span>), <span class="bu">dict</span>(op<span class="op">=</span><span class="st">'add'</span>, cell<span class="op">=</span><span class="bu">dict</span>(<span class="bu">id</span><span class="op">=</span><span class="st">'ddd4'</span>, source<span class="op">=</span><span class="st">'4'</span>), after<span class="op">=</span><span class="st">'ggg7'</span>)]</span>
+<span id="cb46-3"><a href="#cb46-3" aria-hidden="true" tabindex="-1"></a><span class="cf">await</span> nb.<span class="bu">apply</span>(ops)</span>
+<span id="cb46-4"><a href="#cb46-4" aria-hidden="true" tabindex="-1"></a>apply_ops(view, ops)</span>
+<span id="cb46-5"><a href="#cb46-5" aria-hidden="true" tabindex="-1"></a>srv <span class="op">=</span> <span class="cf">await</span> nb.cells()</span>
+<span id="cb46-6"><a href="#cb46-6" aria-hidden="true" tabindex="-1"></a>test_eq([c[<span class="st">'id'</span>] <span class="cf">for</span> c <span class="kw">in</span> view], [c[<span class="st">'id'</span>] <span class="cf">for</span> c <span class="kw">in</span> srv])</span>
+<span id="cb46-7"><a href="#cb46-7" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> i <span class="kw">in</span> (<span class="st">'zzz9'</span>, <span class="st">'ccc3'</span>, <span class="st">'ddd4'</span>): test_eq(<span class="bu">next</span>(c <span class="cf">for</span> c <span class="kw">in</span> view <span class="cf">if</span> c[<span class="st">'id'</span>]<span class="op">==</span>i), <span class="bu">next</span>(c <span class="cf">for</span> c <span class="kw">in</span> srv <span class="cf">if</span> c[<span class="st">'id'</span>]<span class="op">==</span>i))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+</section>
+<section id="change-broadcasts" class="level2">
+<h2 class="anchored" data-anchor-id="change-broadcasts">Change broadcasts</h2>
+<p>Create a kernel with <code>path</code> to subscribe its websocket clients to that notebook’s changes. Broadcasts use message type <code>cell_ops</code> on channel <code>cells</code>, with content <code>path</code> and <code>ops</code>. Every subscriber receives accepted changes, including their author:</p>
+<div id="c097cf76" class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb47"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb47-1"><a href="#cb47-1" aria-hidden="true" tabindex="-1"></a>kc <span class="op">=</span> JupyAsyncKernelClient(g.url)</span>
+<span id="cb47-2"><a href="#cb47-2" aria-hidden="true" tabindex="-1"></a><span class="cf">await</span> kc.start_kernel(path<span class="op">=</span><span class="st">'d.ipynb'</span>)</span>
+<span id="cb47-3"><a href="#cb47-3" aria-hidden="true" tabindex="-1"></a>qs <span class="op">=</span> JmsgQueues(kc, queues<span class="op">=</span>(<span class="st">'jmsg'</span>,), merge<span class="op">=</span><span class="bu">dict</span>(iopub<span class="op">=</span><span class="st">'jmsg'</span>, stdin<span class="op">=</span><span class="st">'jmsg'</span>, cells<span class="op">=</span><span class="st">'jmsg'</span>))</span>
+<span id="cb47-4"><a href="#cb47-4" aria-hidden="true" tabindex="-1"></a>kc.start_channels()</span>
+<span id="cb47-5"><a href="#cb47-5" aria-hidden="true" tabindex="-1"></a><span class="cf">await</span> kc.wait_for_ready(timeout<span class="op">=</span><span class="dv">60</span>)</span>
+<span id="cb47-6"><a href="#cb47-6" aria-hidden="true" tabindex="-1"></a>kc.channels_running</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-display">
+<pre><code>True</code></pre>
+</div>
+</div>
+<div id="400df8c9" class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb49"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb49-1"><a href="#cb49-1" aria-hidden="true" tabindex="-1"></a><span class="cf">await</span> nb.<span class="bu">apply</span>([<span class="bu">dict</span>(op<span class="op">=</span><span class="st">'update'</span>, <span class="bu">id</span><span class="op">=</span><span class="st">'aaa1'</span>, source<span class="op">=</span><span class="st">'40+2'</span>)])</span>
+<span id="cb49-2"><a href="#cb49-2" aria-hidden="true" tabindex="-1"></a>m <span class="op">=</span> <span class="cf">await</span> qs.jmsg_for(<span class="st">'cell_ops'</span>, timeout<span class="op">=</span><span class="dv">15</span>)</span>
+<span id="cb49-3"><a href="#cb49-3" aria-hidden="true" tabindex="-1"></a>test_eq(m[<span class="st">'header'</span>][<span class="st">'msg_type'</span>], <span class="st">'cell_ops'</span>)</span>
+<span id="cb49-4"><a href="#cb49-4" aria-hidden="true" tabindex="-1"></a>m[<span class="st">'content'</span>]</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-display">
+<pre><code>{'path': 'd.ipynb',
+ 'ops': [{'op': 'update',
+   'id': 'aaa1',
+   'cell_type': 'code',
+   'execution_count': None,
+   'metadata': {},
+   'outputs': [],
+   'source': '40+2'}]}</code></pre>
+</div>
+</div>
+<p>Apply the broadcast’s operations to the local cells:</p>
+<div id="e713e70e" class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb51"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb51-1"><a href="#cb51-1" aria-hidden="true" tabindex="-1"></a>apply_ops(view, m[<span class="st">'content'</span>][<span class="st">'ops'</span>])</span>
+<span id="cb51-2"><a href="#cb51-2" aria-hidden="true" tabindex="-1"></a>test_eq(<span class="bu">next</span>(c[<span class="st">'source'</span>] <span class="cf">for</span> c <span class="kw">in</span> view <span class="cf">if</span> c[<span class="st">'id'</span>]<span class="op">==</span><span class="st">'aaa1'</span>), <span class="st">'40+2'</span>)</span>
+<span id="cb51-3"><a href="#cb51-3" aria-hidden="true" tabindex="-1"></a>m[<span class="st">'content'</span>][<span class="st">'path'</span>]</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-display">
+<pre><code>'d.ipynb'</code></pre>
+</div>
+</div>
+<p>Edits from a second cells client arrive through the same websocket. The <code>meta</code> operation merges notebook metadata; <code>null</code> deletes a key. Its broadcast contains the resulting metadata. <code>view(fields='meta', limit=0)</code> reads notebook information without returning cells:</p>
+<div id="2683d0a7" class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb53"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb53-1"><a href="#cb53-1" aria-hidden="true" tabindex="-1"></a>own <span class="op">=</span> JupyAsyncCellsClient(g.url, kernel_id<span class="op">=</span>kc.kernel_id)</span>
+<span id="cb53-2"><a href="#cb53-2" aria-hidden="true" tabindex="-1"></a><span class="cf">await</span> own.<span class="bu">apply</span>([<span class="bu">dict</span>(op<span class="op">=</span><span class="st">'update'</span>, <span class="bu">id</span><span class="op">=</span><span class="st">'aaa1'</span>, source<span class="op">=</span><span class="st">'6*7'</span>), <span class="bu">dict</span>(op<span class="op">=</span><span class="st">'meta'</span>, metadata<span class="op">=</span><span class="bu">dict</span>(topic<span class="op">=</span><span class="st">'arithmetic'</span>))])</span>
+<span id="cb53-3"><a href="#cb53-3" aria-hidden="true" tabindex="-1"></a>m <span class="op">=</span> <span class="cf">await</span> qs.jmsg_for(<span class="st">'cell_ops'</span>, timeout<span class="op">=</span><span class="dv">5</span>)</span>
+<span id="cb53-4"><a href="#cb53-4" aria-hidden="true" tabindex="-1"></a>test_eq(<span class="bu">next</span>(c[<span class="st">'source'</span>] <span class="cf">for</span> c <span class="kw">in</span> apply_ops(view, m[<span class="st">'content'</span>][<span class="st">'ops'</span>]) <span class="cf">if</span> c[<span class="st">'id'</span>]<span class="op">==</span><span class="st">'aaa1'</span>), <span class="st">'6*7'</span>)</span>
+<span id="cb53-5"><a href="#cb53-5" aria-hidden="true" tabindex="-1"></a>info <span class="op">=</span> <span class="cf">await</span> own.view(fields<span class="op">=</span><span class="st">'meta'</span>, limit<span class="op">=</span><span class="dv">0</span>)</span>
+<span id="cb53-6"><a href="#cb53-6" aria-hidden="true" tabindex="-1"></a>test_eq((info[<span class="st">'path'</span>], info[<span class="st">'metadata'</span>][<span class="st">'topic'</span>], info[<span class="st">'cells'</span>]), (<span class="st">'d.ipynb'</span>, <span class="st">'arithmetic'</span>, []))</span>
+<span id="cb53-7"><a href="#cb53-7" aria-hidden="true" tabindex="-1"></a>info</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<p>To save execution output into the bound notebook, put the cell id in the request metadata as <code>cellId</code>. The gateway updates that cell’s held state before forwarding its iopub messages. A cells fetch after the execution’s <code>idle</code> can read the saved output.</p>
+<p>An execution without <code>cellId</code>, or with an id absent from the notebook, still runs but does not persist its output:</p>
+<div id="bd595320" class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb54"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb54-1"><a href="#cb54-1" aria-hidden="true" tabindex="-1"></a>kc.execute(<span class="st">'6*7'</span>, metadata<span class="op">=</span><span class="bu">dict</span>(cellId<span class="op">=</span><span class="st">'aaa1'</span>))</span>
+<span id="cb54-2"><a href="#cb54-2" aria-hidden="true" tabindex="-1"></a><span class="cf">await</span> qs.jmsg_for(<span class="st">'status'</span>, pred<span class="op">=</span><span class="kw">lambda</span> m: m[<span class="st">'content'</span>][<span class="st">'execution_state'</span>] <span class="op">==</span> <span class="st">'idle'</span>, timeout<span class="op">=</span><span class="dv">15</span>)</span>
+<span id="cb54-3"><a href="#cb54-3" aria-hidden="true" tabindex="-1"></a>c, <span class="op">=</span> <span class="cf">await</span> nb.cells(ids<span class="op">=</span>[<span class="st">'aaa1'</span>])</span>
+<span id="cb54-4"><a href="#cb54-4" aria-hidden="true" tabindex="-1"></a>test_eq(c[<span class="st">'outputs'</span>][<span class="dv">0</span>][<span class="st">'data'</span>][<span class="st">'text/plain'</span>], <span class="st">'42'</span>)</span>
+<span id="cb54-5"><a href="#cb54-5" aria-hidden="true" tabindex="-1"></a>test_eq(c[<span class="st">'execution_count'</span>], <span class="dv">1</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<p>The cells GET applies selection and filters in order. <code>ids</code>, <code>idx</code>, <code>section</code> and <code>ancestors</code> select a union of cells in document order, without duplicates. Positions start at zero; negative positions count from the end. With no selectors, it starts with all cells. Missing IDs select nothing. A section includes its heading and ends before the next heading of the same or higher level. A non-heading selects itself. Ancestors exclude the addressed cell. Collapse flags do not affect either selector.</p>
+<p>Headings are Markdown cells whose first nonblank, non-directive line matches <code>^#{1,6} \w</code>. Lines starting with <code>#|</code> are directives. Ordinary text on the first remaining line makes the cell a non-heading, regardless of later lines.</p>
+<p>The selected cells must pass <code>q</code>, <code>cell_type</code>, <code>meta</code>, and <code>meta_not</code> when supplied. <code>q</code> is a multiline, smart-case regex over source text. <code>limit</code> keeps the first matching cells, then <code>context</code> adds neighbours. When context is requested, the <code>view</code> result’s <code>matched</code> lists the matches before that expansion.</p>
+<p><code>fields='id,source'</code> returns just those cell fields. Omit <code>fields</code> for full cells without attachments, or pass <code>fields='*'</code> to include attachments. <code>metadata</code> names cell metadata; <code>meta</code> requests notebook metadata in the response, as in <code>fields='*,meta'</code> for a complete notebook read.</p>
+<div id="6cefde94" class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb55"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb55-1"><a href="#cb55-1" aria-hidden="true" tabindex="-1"></a>test_eq([c[<span class="st">'id'</span>] <span class="cf">for</span> c <span class="kw">in</span> <span class="cf">await</span> nb.cells(idx<span class="op">=</span>[<span class="dv">0</span>,<span class="op">-</span><span class="dv">1</span>])], [<span class="st">'ccc3'</span>, <span class="st">'ddd4'</span>])</span>
+<span id="cb55-2"><a href="#cb55-2" aria-hidden="true" tabindex="-1"></a>test_eq([c[<span class="st">'id'</span>] <span class="cf">for</span> c <span class="kw">in</span> <span class="cf">await</span> nb.cells(ids<span class="op">=</span><span class="st">'zzz9'</span>, idx<span class="op">=</span>[<span class="dv">0</span>])], [<span class="st">'ccc3'</span>, <span class="st">'zzz9'</span>])</span>
+<span id="cb55-3"><a href="#cb55-3" aria-hidden="true" tabindex="-1"></a>test_eq([c[<span class="st">'id'</span>] <span class="cf">for</span> c <span class="kw">in</span> <span class="cf">await</span> nb.cells(q<span class="op">=</span><span class="vs">r'</span><span class="ch">\*</span><span class="vs">'</span>)], [<span class="st">'aaa1'</span>])</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<p>For <code>meta</code>, provide a dictionary that the cell’s metadata must contain as a recursive subset. <code>meta_not</code> excludes cells matching that subset. A <code>None</code> value means the key must exist, whatever its value.</p>
+<p>A metadata <code>merge</code> uses <code>None</code> differently: it deletes that key. This example adds a tag, finds the tagged cell, then removes the tag:</p>
+<div id="b801e282" class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb56"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb56-1"><a href="#cb56-1" aria-hidden="true" tabindex="-1"></a><span class="cf">await</span> nb.<span class="bu">apply</span>([<span class="bu">dict</span>(op<span class="op">=</span><span class="st">'merge'</span>, <span class="bu">id</span><span class="op">=</span><span class="st">'zzz9'</span>, metadata<span class="op">=</span><span class="bu">dict</span>(tag<span class="op">=</span><span class="dv">1</span>))])</span>
+<span id="cb56-2"><a href="#cb56-2" aria-hidden="true" tabindex="-1"></a>test_eq([c[<span class="st">'id'</span>] <span class="cf">for</span> c <span class="kw">in</span> <span class="cf">await</span> nb.cells(meta<span class="op">=</span><span class="bu">dict</span>(tag<span class="op">=</span><span class="va">None</span>))], [<span class="st">'zzz9'</span>])</span>
+<span id="cb56-3"><a href="#cb56-3" aria-hidden="true" tabindex="-1"></a><span class="cf">await</span> nb.<span class="bu">apply</span>([<span class="bu">dict</span>(op<span class="op">=</span><span class="st">'merge'</span>, <span class="bu">id</span><span class="op">=</span><span class="st">'zzz9'</span>, metadata<span class="op">=</span><span class="bu">dict</span>(tag<span class="op">=</span><span class="va">None</span>))])</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-display">
+<pre><code>[]</code></pre>
+</div>
+</div>
+<p>With <code>context=1</code>, the result includes up to one neighbour on either side of each match. <code>matched</code> identifies the cells that matched the query:</p>
+<div id="da3429a4" class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb58"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb58-1"><a href="#cb58-1" aria-hidden="true" tabindex="-1"></a>got <span class="op">=</span> <span class="cf">await</span> nb.view(q<span class="op">=</span><span class="vs">r'</span><span class="ch">\*</span><span class="vs">'</span>, context<span class="op">=</span><span class="dv">1</span>)</span>
+<span id="cb58-2"><a href="#cb58-2" aria-hidden="true" tabindex="-1"></a>test_eq((<span class="bu">len</span>(got[<span class="st">'cells'</span>]), got[<span class="st">'matched'</span>]), (<span class="dv">3</span>, [<span class="st">'aaa1'</span>]))</span>
+<span id="cb58-3"><a href="#cb58-3" aria-hidden="true" tabindex="-1"></a>[c[<span class="st">'id'</span>] <span class="cf">for</span> c <span class="kw">in</span> got[<span class="st">'cells'</span>]]</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-display">
+<pre><code>['ccc3', 'aaa1', '97270c84']</code></pre>
+</div>
+</div>
+<p>A <code>{'op':'rename','to':...}</code> broadcast reports the new notebook path. A kernel-addressed cells client keeps using the same kernel id.</p>
+<p>Broadcast adds and updates contain the resulting cell fields. They need no follow-up read for those fields. Attachment bytes travel separately: attachment events identify the affected attachment, and clients fetch its bytes when needed. Notebook metadata changes arrive as <code>meta</code> operations containing the resulting metadata.</p>
+<p>While a notebook is bound, the gateway keeps its current parsed state in memory. A changed disk mtime prompts a reload. Valid foreign writes replace the held state, repairing duplicate ids and broadcasting ordinary change operations. Missing or malformed files leave the open buffer unchanged, without forced restoration; pending changes save normally.</p>
+<p>After reconnecting, reload the binding and notebook. No missed messages are replayed.</p>
+
+
+</section>
+
+</main> <!-- /main -->
+<script id="quarto-html-after-body" type="application/javascript">
+  window.document.addEventListener("DOMContentLoaded", function (event) {
+    const icon = "";
+    const anchorJS = new window.AnchorJS();
+    anchorJS.options = {
+      placement: 'right',
+      icon: icon
+    };
+    anchorJS.add('.anchored');
+    const isCodeAnnotation = (el) => {
+      for (const clz of el.classList) {
+        if (clz.startsWith('code-annotation-')) {                     
+          return true;
+        }
+      }
+      return false;
+    }
+    const onCopySuccess = function(e) {
+      // button target
+      const button = e.trigger;
+      // don't keep focus
+      button.blur();
+      // flash "checked"
+      button.classList.add('code-copy-button-checked');
+      var currentTitle = button.getAttribute("title");
+      button.setAttribute("title", "Copied!");
+      let tooltip;
+      if (window.bootstrap) {
+        button.setAttribute("data-bs-toggle", "tooltip");
+        button.setAttribute("data-bs-placement", "left");
+        button.setAttribute("data-bs-title", "Copied!");
+        tooltip = new bootstrap.Tooltip(button, 
+          { trigger: "manual", 
+            customClass: "code-copy-button-tooltip",
+            offset: [0, -8]});
+        tooltip.show();    
+      }
+      setTimeout(function() {
+        if (tooltip) {
+          tooltip.hide();
+          button.removeAttribute("data-bs-title");
+          button.removeAttribute("data-bs-toggle");
+          button.removeAttribute("data-bs-placement");
+        }
+        button.setAttribute("title", currentTitle);
+        button.classList.remove('code-copy-button-checked');
+      }, 1000);
+      // clear code selection
+      e.clearSelection();
+    }
+    const getTextToCopy = function(trigger) {
+      const outerScaffold = trigger.parentElement.cloneNode(true);
+      const codeEl = outerScaffold.querySelector('code');
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+    const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+      text: getTextToCopy
+    });
+    clipboard.on('success', onCopySuccess);
+    if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+      const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+        text: getTextToCopy,
+        container: window.document.getElementById('quarto-embedded-source-code-modal')
+      });
+      clipboardModal.on('success', onCopySuccess);
+    }
+      var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+      var mailtoRegex = new RegExp(/^mailto:/);
+        var filterRegex = new RegExp("https:\/\/AnswerDotAI\.github\.io\/jupyasyncclient");
+      var isInternal = (href) => {
+          return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+      }
+      // Inspect non-navigation links and adorn them if external
+     var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+      for (var i=0; i<links.length; i++) {
+        const link = links[i];
+        if (!isInternal(link.href)) {
+          // undo the damage that might have been done by quarto-nav.js in the case of
+          // links that we want to consider external
+          if (link.dataset.originalHref !== undefined) {
+            link.href = link.dataset.originalHref;
+          }
+        }
+      }
+    function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+      const config = {
+        allowHTML: true,
+        maxWidth: 500,
+        delay: 100,
+        arrow: false,
+        appendTo: function(el) {
+            return el.parentElement;
+        },
+        interactive: true,
+        interactiveBorder: 10,
+        theme: 'quarto',
+        placement: 'bottom-start',
+      };
+      if (contentFn) {
+        config.content = contentFn;
+      }
+      if (onTriggerFn) {
+        config.onTrigger = onTriggerFn;
+      }
+      if (onUntriggerFn) {
+        config.onUntrigger = onUntriggerFn;
+      }
+      window.tippy(el, config); 
+    }
+    const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+    for (var i=0; i<noterefs.length; i++) {
+      const ref = noterefs[i];
+      tippyHover(ref, function() {
+        // use id or data attribute instead here
+        let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+        try { href = new URL(href).hash; } catch {}
+        const id = href.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note) {
+          return note.innerHTML;
+        } else {
+          return "";
+        }
+      });
+    }
+    const xrefs = window.document.querySelectorAll('a.quarto-xref');
+    const processXRef = (id, note) => {
+      // Strip column container classes
+      const stripColumnClz = (el) => {
+        el.classList.remove("page-full", "page-columns");
+        if (el.children) {
+          for (const child of el.children) {
+            stripColumnClz(child);
+          }
+        }
+      }
+      stripColumnClz(note)
+      if (id === null || id.startsWith('sec-')) {
+        // Special case sections, only their first couple elements
+        const container = document.createElement("div");
+        if (note.children && note.children.length > 2) {
+          container.appendChild(note.children[0].cloneNode(true));
+          for (let i = 1; i < note.children.length; i++) {
+            const child = note.children[i];
+            if (child.tagName === "P" && child.innerText === "") {
+              continue;
+            } else {
+              container.appendChild(child.cloneNode(true));
+              break;
+            }
+          }
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(container);
+          }
+          return container.innerHTML
+        } else {
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(note);
+          }
+          return note.innerHTML;
+        }
+      } else {
+        // Remove any anchor links if they are present
+        const anchorLink = note.querySelector('a.anchorjs-link');
+        if (anchorLink) {
+          anchorLink.remove();
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        if (note.classList.contains("callout")) {
+          return note.outerHTML;
+        } else {
+          return note.innerHTML;
+        }
+      }
+    }
+    for (var i=0; i<xrefs.length; i++) {
+      const xref = xrefs[i];
+      tippyHover(xref, undefined, function(instance) {
+        instance.disable();
+        let url = xref.getAttribute('href');
+        let hash = undefined; 
+        if (url.startsWith('#')) {
+          hash = url;
+        } else {
+          try { hash = new URL(url).hash; } catch {}
+        }
+        if (hash) {
+          const id = hash.replace(/^#\/?/, "");
+          const note = window.document.getElementById(id);
+          if (note !== null) {
+            try {
+              const html = processXRef(id, note.cloneNode(true));
+              instance.setContent(html);
+            } finally {
+              instance.enable();
+              instance.show();
+            }
+          } else {
+            // See if we can fetch this
+            fetch(url.split('#')[0])
+            .then(res => res.text())
+            .then(html => {
+              const parser = new DOMParser();
+              const htmlDoc = parser.parseFromString(html, "text/html");
+              const note = htmlDoc.getElementById(id);
+              if (note !== null) {
+                const html = processXRef(id, note);
+                instance.setContent(html);
+              } 
+            }).finally(() => {
+              instance.enable();
+              instance.show();
+            });
+          }
+        } else {
+          // See if we can fetch a full url (with no hash to target)
+          // This is a special case and we should probably do some content thinning / targeting
+          fetch(url)
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.querySelector('main.content');
+            if (note !== null) {
+              // This should only happen for chapter cross references
+              // (since there is no id in the URL)
+              // remove the first header
+              if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+                note.children[0].remove();
+              }
+              const html = processXRef(null, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      }, function(instance) {
+      });
+    }
+        let selectedAnnoteEl;
+        const selectorForAnnotation = ( cell, annotation) => {
+          let cellAttr = 'data-code-cell="' + cell + '"';
+          let lineAttr = 'data-code-annotation="' +  annotation + '"';
+          const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+          return selector;
+        }
+        const selectCodeLines = (annoteEl) => {
+          const doc = window.document;
+          const targetCell = annoteEl.getAttribute("data-target-cell");
+          const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+          const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+          const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+          const lineIds = lines.map((line) => {
+            return targetCell + "-" + line;
+          })
+          let top = null;
+          let height = null;
+          let parent = null;
+          if (lineIds.length > 0) {
+              //compute the position of the single el (top and bottom and make a div)
+              const el = window.document.getElementById(lineIds[0]);
+              top = el.offsetTop;
+              height = el.offsetHeight;
+              parent = el.parentElement.parentElement;
+            if (lineIds.length > 1) {
+              const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+              const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+              height = bottom - top;
+            }
+            if (top !== null && height !== null && parent !== null) {
+              // cook up a div (if necessary) and position it 
+              let div = window.document.getElementById("code-annotation-line-highlight");
+              if (div === null) {
+                div = window.document.createElement("div");
+                div.setAttribute("id", "code-annotation-line-highlight");
+                div.style.position = 'absolute';
+                parent.appendChild(div);
+              }
+              div.style.top = top - 2 + "px";
+              div.style.height = height + 4 + "px";
+              div.style.left = 0;
+              let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+              if (gutterDiv === null) {
+                gutterDiv = window.document.createElement("div");
+                gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+                gutterDiv.style.position = 'absolute';
+                const codeCell = window.document.getElementById(targetCell);
+                const gutter = codeCell.querySelector('.code-annotation-gutter');
+                gutter.appendChild(gutterDiv);
+              }
+              gutterDiv.style.top = top - 2 + "px";
+              gutterDiv.style.height = height + 4 + "px";
+            }
+            selectedAnnoteEl = annoteEl;
+          }
+        };
+        const unselectCodeLines = () => {
+          const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+          elementsIds.forEach((elId) => {
+            const div = window.document.getElementById(elId);
+            if (div) {
+              div.remove();
+            }
+          });
+          selectedAnnoteEl = undefined;
+        };
+          // Handle positioning of the toggle
+      window.addEventListener(
+        "resize",
+        throttle(() => {
+          elRect = undefined;
+          if (selectedAnnoteEl) {
+            selectCodeLines(selectedAnnoteEl);
+          }
+        }, 10)
+      );
+      function throttle(fn, ms) {
+      let throttle = false;
+      let timer;
+        return (...args) => {
+          if(!throttle) { // first call gets through
+              fn.apply(this, args);
+              throttle = true;
+          } else { // all the others get throttled
+              if(timer) clearTimeout(timer); // cancel #2
+              timer = setTimeout(() => {
+                fn.apply(this, args);
+                timer = throttle = false;
+              }, ms);
+          }
+        };
+      }
+        // Attach click handler to the DT
+        const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+        for (const annoteDlNode of annoteDls) {
+          annoteDlNode.addEventListener('click', (event) => {
+            const clickedEl = event.target;
+            if (clickedEl !== selectedAnnoteEl) {
+              unselectCodeLines();
+              const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+              if (activeEl) {
+                activeEl.classList.remove('code-annotation-active');
+              }
+              selectCodeLines(clickedEl);
+              clickedEl.classList.add('code-annotation-active');
+            } else {
+              // Unselect the line
+              unselectCodeLines();
+              clickedEl.classList.remove('code-annotation-active');
+            }
+          });
+        }
+    const findCites = (el) => {
+      const parentEl = el.parentElement;
+      if (parentEl) {
+        const cites = parentEl.dataset.cites;
+        if (cites) {
+          return {
+            el,
+            cites: cites.split(' ')
+          };
+        } else {
+          return findCites(el.parentElement)
+        }
+      } else {
+        return undefined;
+      }
+    };
+    var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+    for (var i=0; i<bibliorefs.length; i++) {
+      const ref = bibliorefs[i];
+      const citeInfo = findCites(ref);
+      if (citeInfo) {
+        tippyHover(citeInfo.el, function() {
+          var popup = window.document.createElement('div');
+          citeInfo.cites.forEach(function(cite) {
+            var citeDiv = window.document.createElement('div');
+            citeDiv.classList.add('hanging-indent');
+            citeDiv.classList.add('csl-entry');
+            var biblioDiv = window.document.getElementById('ref-' + cite);
+            if (biblioDiv) {
+              citeDiv.innerHTML = biblioDiv.innerHTML;
+            }
+            popup.appendChild(citeDiv);
+          });
+          return popup.innerHTML;
+        });
+      }
+    }
+  });
+  </script>
+</div> <!-- /content -->
+
+
+
+
+<footer class="footer"><div class="nav-footer"><div class="nav-footer-center"><div class="toc-actions d-sm-block d-md-none"><ul><li><a href="https://github.com/AnswerDotAI/jupyasyncclient/issues/new" class="toc-action"><i class="bi bi-github"></i>Report an issue</a></li></ul></div></div></div></footer></body></html>
