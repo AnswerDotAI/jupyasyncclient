@@ -2,6 +2,13 @@
 
 <!-- do not remove -->
 
+## 0.2.18
+
+### New Features
+
+- Add before/after cell selection params to the cells API client and spec ([#29](https://github.com/AnswerDotAI/jupyasyncclient/issues/29))
+
+
 ## 0.2.17
 
 ### New Features
