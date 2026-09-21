@@ -2,6 +2,13 @@
 
 <!-- do not remove -->
 
+## 0.2.19
+
+### New Features
+
+- Add `up`, `refs` and `max_tokens` to the cells `view`, and default `kernel_name` to `py` ([#30](https://github.com/AnswerDotAI/jupyasyncclient/pull/30)), thanks to [@jph00](https://github.com/jph00)
+
+
 ## 0.2.18
 
 ### New Features
