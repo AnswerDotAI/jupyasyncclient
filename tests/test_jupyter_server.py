@@ -32,7 +32,7 @@ async def test_reconnect_survives_drop_and_gives_up_when_kernel_dies(jp_server):
         rep = await kc.reply("1+1", timeout=TIMEOUT)  # live traffic flows again on the redialed socket
         assert rep["content"]["status"] == "ok"
         kc.reconnect_ceiling = 10
-        t = asyncio.create_task(kc.reply("import time; time.sleep(30)", timeout=60))
+        t = asyncio.create_task(kc.reply("import os, signal; os.kill(os.getpid(), signal.SIGKILL)", timeout=60))
         await asyncio.sleep(0.3)
         await kc.api.kernels.delete_kernel(kid=kc.kernel_id)  # the kernel goes away for real, behind the connection's back...
         kc._ws.transport.abort()                # ...and then the connection dies: the redial probe finds the kernel gone

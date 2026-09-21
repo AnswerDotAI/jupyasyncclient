@@ -106,7 +106,7 @@ def stop_channels(self: JupyAsyncKernelClient):
 
 # %% ../nbs/00_core.ipynb #1263d477
 @patch
-async def start_kernel(self:JupyAsyncKernelClient, kernel_name="python3", **kwargs):
+async def start_kernel(self:JupyAsyncKernelClient, kernel_name="py", **kwargs):
     for k in ('path', 'cwd'):
         if kwargs.get(k) is not None: kwargs[k] = str(kwargs[k])
     response = await self.api.kernels.create_kernel(name=kernel_name, raw_=True, **kwargs)

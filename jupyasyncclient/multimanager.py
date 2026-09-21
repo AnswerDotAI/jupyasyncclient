@@ -13,7 +13,7 @@ __all__ = ["JupyAsyncMultiKernelManager"]
 class JupyAsyncMultiKernelManager(KernelApi):
     "AsyncMultiKernelManager-ish wrapper over the kernels API."
     kernel_manager_class = JupyAsyncKernelManager
-    def __init__(self, base_url, *, token=None, kernel_name="python3", username=None, headers=None, timeout=30, http_client=None, verify=True):
+    def __init__(self, base_url, *, token=None, kernel_name="py", username=None, headers=None, timeout=30, http_client=None, verify=True):
         super().__init__(base_url, token=token, headers=headers, timeout=timeout, http_client=http_client, verify=verify)
         self.kernel_name,self.username = kernel_name,username
         self._kernels,self._owned,self._keys = {},set(),{}
