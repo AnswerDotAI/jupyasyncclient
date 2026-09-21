@@ -137,22 +137,24 @@ async def view(
     meta=None, # Keep only cells whose metadata contains this dict as a recursive subset; a None value means "key present"
     meta_not=None, # Drop cells whose metadata contains this dict as a recursive subset
     limit=None, # Keep at most this many cells after filtering
+    max_tokens=None, # Then keep the newest cells whose approximate token counts total at most this many
     context=None, # Also return this many neighbours either side of each kept cell; `matched` in the result names the true matches
     fields=None, # Comma-separated cell fields; '*' includes attachments, 'meta' adds notebook metadata; None omits attachments
+    up=None, # Notebook name to also read from this notebook's folder and each ancestor folder, returned as `inherited`
+    refs=False, # Add `refs`, the `vars`, `cmds` and `tools` that sigils reference in the returned cells?
 ):
     "The selected cells with their notebook path, requested metadata and matched ids."
     return await self._op(self.api.cells.get_cells if self.kernel_id is None else self.api.kernels.get_kernel_cells,
         **(dict(path=self.path) if self.kernel_id is None else dict(kid=self.kernel_id)),
         ids=_cs(ids), idx=_cs(idx), section=section, ancestors=ancestors, before=before, after=after, q=q, cell_type=cell_type,
         meta=None if meta is None else json.dumps(meta), meta_not=None if meta_not is None else json.dumps(meta_not),
-        limit=limit, context=context, fields=fields)
+        limit=limit, max_tokens=max_tokens, context=context, fields=fields, up=up, refs=refs or None)
 
 @patch
 @delegates(JupyAsyncCellsClient.view)
 async def cells(self:JupyAsyncCellsClient, ids=None, **kwargs):
     "The selected cells in document order."
     return (await self.view(ids=ids, **kwargs))['cells']
-
 
 # %% ../nbs/02_files.ipynb #a55ffe0f
 @patch
