@@ -68,9 +68,8 @@ async def resize(self:JupyAsyncTerminalClient, rows:int, cols:int):
 
 @patch
 async def frames(self:JupyAsyncTerminalClient):
-    "Incoming frames: pty output as `bytes`, control frames as parsed dicts. Ends when the ws closes."
-    with suppress(websockets.ConnectionClosed):
-        async for frame in self._ws: yield frame if isinstance(frame, bytes) else json.loads(frame)
+    "Incoming frames: pty output as `bytes`, control frames as parsed dicts. Ends when the ws closes normally. A broken connection raises `websockets.ConnectionClosedError`."
+    async for frame in self._ws: yield frame if isinstance(frame, bytes) else json.loads(frame)
 
 @patch
 async def aclose(self:JupyAsyncTerminalClient):
