@@ -2,6 +2,13 @@
 
 <!-- do not remove -->
 
+## 0.2.20
+
+### Bugs Squashed
+
+- frames now propagates connection errors instead of silently suppressing ConnectionClosed ([#31](https://github.com/AnswerDotAI/jupyasyncclient/issues/31))
+
+
 ## 0.2.19
 
 ### New Features
