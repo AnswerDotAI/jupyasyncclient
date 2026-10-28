@@ -14,7 +14,7 @@ from fastspec.oapi import OpenAPIClient, SpecParser
 from fasttransport.errors import APIError
 from contextlib import suppress
 from urllib.parse import urlencode, urlsplit, urlunsplit
-from jupywire.session import Session, validate_string_dict, dumps, loads, serialize_binary_message, deserialize_binary_message
+from jupywire.session import Session, validate_string_dict, to_frame, from_frame
 from jupywire.ops import EvalOps
 from jupywire.route import RouterOps, DeadKernelError
 from fastcore.basics import patch
@@ -37,7 +37,7 @@ def _join_url(base, path, ws=False, params=None):
 # %% ../nbs/00_core.ipynb #b5f06ba9
 @functools.cache
 def rg_spec():
-    "The bundled rustygate spec, loaded once per process from its compact `rg_spec` module."
+    "The bundled spec of rustygate's public API, loaded once per process from its compact `rg_spec` module."
     from jupyasyncclient.rg_spec import spec
     return SpecParser.from_dict(spec)
 
@@ -47,12 +47,13 @@ def build_spec(nm='jupyasyncclient/rg_spec.py', url='http://localhost:8787'):
 
 class KernelApi:
     "Shared HTTP plumbing for the Jupyter kernels API: one transport, and the spec-generated ops on `api`."
-    def __init__(self, base_url, token=None, headers=None, timeout=30, http_client=None, verify=True):
+    def __init__(self, base_url, token=None, headers=None, timeout=30, http_client=None, verify=True, spec=None):
         self.base_url,self.token,self._timeout,self.verify = base_url.rstrip('/'),token or '',timeout,verify
         self._headers = {**(headers or {})}
         if self.token and 'Authorization' not in self._headers: self._headers['Authorization'] = f'token {self.token}'
         self.transport = AsyncTransport(timeout=timeout, client=http_client, base_headers=self._headers, verify=verify)
-        self.api = OpenAPIClient(rg_spec(), transport=self.transport, base_url=self.base_url)
+        self.spec = spec or rg_spec()
+        self.api = OpenAPIClient(self.spec, transport=self.transport, base_url=self.base_url)
 
     def _ws_ssl(self, url):
         "An unverified ssl context when `verify=False` and `url` is wss, else None for the library default."
@@ -68,17 +69,18 @@ class JupyAsyncKernelClient(RouterOps, EvalOps, KernelApi):
     "AsyncKernelClient-ish API over the kernels HTTP API plus its websocket channels."
     allow_stdin = True
     def __init__(self, base_url, kernel_id=None, token=None, session_id=None, username=None, headers=None, timeout=30, http_client=None,
-        reconnect=True, reconnect_ceiling=300.0, verify=True, max_size=256*2**20):
-        super().__init__(base_url, token=token, headers=headers, timeout=timeout, http_client=http_client, verify=verify)
+        reconnect=True, reconnect_ceiling=300.0, verify=True, max_size=256*2**20, spec=None, default_timeout=None):
+        super().__init__(base_url, token=token, headers=headers, timeout=timeout, http_client=http_client, verify=verify, spec=spec)
         self.kernel_id = kernel_id
         self.owned = False    # True only when `start_kernel` created the kernel; honored by `__aexit__`
         self.session_id = session_id or uuid.uuid4().hex
         self.session = Session(session=self.session_id, username=username or os.environ.get("USER") or "")
         self._ws,self._start_task,self._send_task,self._recv_task,self._close_task = [None]*5
-        self.reconnect,self.reconnect_ceiling,self._unsent,self._closing = reconnect,reconnect_ceiling,None,False
-        self.max_size = max_size
+        self.reconnect,self.reconnect_ceiling,self._closing = reconnect,reconnect_ceiling,False
+        self.max_size,self.default_timeout = max_size,default_timeout
         self._send_q = asyncio.Queue()
         self._init_router()
+        self.on_reconnect = None
 
     def _kpath(self, kernel_id='', suffix=''): return super()._kpath(kernel_id or self.kernel_id, suffix)
 
@@ -156,17 +158,9 @@ async def _ensure_started(self: JupyAsyncKernelClient):
 
 @patch
 def send(self: JupyAsyncKernelClient, msg, channel: str):
-    "Serialize `msg` (binary framing when it carries buffers) and queue its frame for `_send_loop`; returns the msg_id."
-    msg = dict(msg)
-    msg["channel"] = channel
-    bufs = msg.get("buffers")
-    if bufs:
-        msg["buffers"] = [bytes(b) for b in bufs]
-        payload = serialize_binary_message(msg)
-    else:
-        msg.pop("buffers", None)
-        payload = dumps(msg)
-    self._send_q.put_nowait(payload)
+    "Queue `msg`, stamped with `channel`, as a websocket frame for `_send_loop`; returns the msg_id."
+    msg = dict(msg, channel=channel)
+    self._send_q.put_nowait(to_frame(msg))
     return msg["header"]["msg_id"]
 
 # %% ../nbs/00_core.ipynb #7bf0ff55
@@ -174,30 +168,32 @@ def send(self: JupyAsyncKernelClient, msg, channel: str):
 async def _send_loop(self: JupyAsyncKernelClient):
     assert self._ws is not None
     while True:
-        payload = self._unsent if self._unsent is not None else await self._send_q.get()
+        payload = await self._send_q.get()
         if payload is None: return
-        self._unsent = payload
         try: await self._ws.send(payload)
         except Exception as e:
             log.warning("websocket send failed: %s", e)
-            return  # the payload stays in `_unsent`: a reconnected send loop retries it first
-        self._unsent = None
+            await self._ws.close()
+            return
 
 @patch
 async def _recv_loop(self: JupyAsyncKernelClient):
     assert self._ws is not None
-    with suppress(websockets.ConnectionClosed):
-        async for data in self._ws:
-            if isinstance(data, str): msg = loads(data)
-            elif isinstance(data, bytes): msg = deserialize_binary_message(data)
-            else: continue
-            try:
-                r = self.route(msg)
-                if inspect.isawaitable(r): await r
-            except Exception: log.exception('inbound message handler failed')
-    if not self._closing:
-        if self.reconnect: self._start_task = asyncio.create_task(self._reconnect())
-        else: self.fail_waiters(ConnectionError('websocket closed (reconnect disabled)'))
+    try:
+        with suppress(websockets.ConnectionClosed):
+            async for data in self._ws:
+                msg = from_frame(data)
+                try:
+                    r = self.route(msg)
+                    if inspect.isawaitable(r): await r
+                except Exception: log.exception('inbound message handler failed')
+    finally:
+        if not self._closing:
+            self.fail_waiters(ConnectionError('websocket connection lost'))
+            if self._send_task and not self._send_task.done(): self._send_task.cancel()
+            self._send_q = asyncio.Queue()
+            await self._ws.close()
+            if self.reconnect: self._start_task = asyncio.create_task(self._reconnect())
 
 # %% ../nbs/00_core.ipynb #3cd67196
 @patch
@@ -290,13 +286,10 @@ def kernel_info(self: JupyAsyncKernelClient, timeout=None): return self.kernel_i
 # %% ../nbs/00_core.ipynb #97540d7e
 @patch
 async def _reconnect(self: JupyAsyncKernelClient):
-    "Redial with the same session id, with backoff; on a dead kernel or an expired ceiling, fail every pending reply and in-flight run."
+    "Redial with the same session id and notify on_reconnect; old operations are never resent."
     deadline, delay = time.monotonic() + self.reconnect_ceiling, 0.1
     while not self._closing:
-        try:
-            await self._start_ws()
-            log.info("websocket reconnected")
-            return
+        try: await self._start_ws()
         except Exception as e:
             exc = None
             try: await self.model()
@@ -310,6 +303,14 @@ async def _reconnect(self: JupyAsyncKernelClient):
                 raise exc
             await asyncio.sleep(delay)
             delay = min(delay*2, 5.0)
+        else:
+            log.info("websocket reconnected")
+            if self.on_reconnect:
+                try:
+                    r = self.on_reconnect()
+                    if inspect.isawaitable(r): await r
+                except Exception: log.exception('reconnect handler failed')
+            return
 
 # %% ../nbs/00_core.ipynb #893a89e0
 @patch
@@ -318,9 +319,9 @@ def shutdown(self: JupyAsyncKernelClient, restart=False, timeout=None):
 
 # %% ../nbs/00_core.ipynb #1239b481
 @patch(cls_method=True)
-async def connect(cls:JupyAsyncKernelClient, base_url, kernel=None, token=None, timeout=60, verify=True, **kw):
+async def connect(cls:JupyAsyncKernelClient, base_url, kernel=None, token=None, timeout=60, verify=True, default_timeout=None, **kw):
     "Return a ready client; only a newly created kernel is owned."
-    self = cls(base_url, kernel_id=kernel, token=token, verify=verify)
+    self = cls(base_url, kernel_id=kernel, token=token, verify=verify, default_timeout=default_timeout)
     if kernel is None: await self.start_kernel(**kw)
     self.start_channels()
     await self.wait_for_ready(timeout=timeout)

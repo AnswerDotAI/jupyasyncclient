@@ -8,7 +8,7 @@ Modules:
 __version__ = "0.2.21"
 
 from jupywire.route import JmsgQueues
-from .core import JupyAsyncKernelClient, DeadKernelError, dumps, loads, serialize_binary_message, deserialize_binary_message
+from .core import JupyAsyncKernelClient, DeadKernelError
 from .manager import JupyAsyncKernelManager, start_new_server_kernel
 from .multimanager import JupyAsyncMultiKernelManager
 from .term import JupyAsyncTerminalClient

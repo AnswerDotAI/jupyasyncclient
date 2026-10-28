@@ -13,8 +13,8 @@ __all__ = ["JupyAsyncMultiKernelManager"]
 class JupyAsyncMultiKernelManager(KernelApi):
     "AsyncMultiKernelManager-ish wrapper over the kernels API."
     kernel_manager_class = JupyAsyncKernelManager
-    def __init__(self, base_url, *, token=None, kernel_name="py", username=None, headers=None, timeout=30, http_client=None, verify=True):
-        super().__init__(base_url, token=token, headers=headers, timeout=timeout, http_client=http_client, verify=verify)
+    def __init__(self, base_url, *, token=None, kernel_name="py", username=None, headers=None, timeout=30, http_client=None, verify=True, spec=None):
+        super().__init__(base_url, token=token, headers=headers, timeout=timeout, http_client=http_client, verify=verify, spec=spec)
         self.kernel_name,self.username = kernel_name,username
         self._kernels,self._owned,self._keys = {},set(),{}
 
@@ -61,7 +61,7 @@ class JupyAsyncMultiKernelManager(KernelApi):
     def get_kernel(self, kernel_id):
         if (km := self._kernels.get(kernel_id)): return km
         km = self.kernel_manager_class(self.base_url, token=self.token, kernel_id=kernel_id, kernel_name=self.kernel_name,
-            username=self.username, timeout=self._timeout, http_client=self.transport.client, verify=self.verify)
+            username=self.username, timeout=self._timeout, http_client=self.transport.client, verify=self.verify, spec=self.spec)
         self._kernels[kernel_id] = km
         return km
 

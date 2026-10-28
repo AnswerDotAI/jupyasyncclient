@@ -23,40 +23,33 @@ from .core import KernelApi
 class JupyAsyncFilesClient(KernelApi):
     "Files and directories over the gateway's contents API."
 
-# %% ../nbs/02_files.ipynb #3e15be7b
-@patch
-async def _op(self:JupyAsyncFilesClient, op, **kw):
-    "Call spec op `op` with None values dropped."
-    return await op(**{k:v for k,v in kw.items() if v is not None})
-
-
 # %% ../nbs/02_files.ipynb #5f99f9ef
 @patch
 async def get(self:JupyAsyncFilesClient, path='', **kwargs):
     "The model at `path`; `kwargs` become query parameters, e.g. `fields`."
-    if not path: return await self._op(self.api.contents.get_root, **kwargs)
-    return await self._op(self.api.contents.get_path, path=path, **kwargs)
+    if not path: return await self.api.contents.get_root(**kwargs)
+    return await self.api.contents.get_path(path=path, **kwargs)
 
 @patch
 async def put(self:JupyAsyncFilesClient, path, **kwargs):
     "PUT to the contents API; `kwargs` are its body and query fields."
-    return await self._op(self.api.contents.put_path, path=path, **kwargs)
+    return await self.api.contents.put_path(path=path, **kwargs)
 
 @patch
 async def post(self:JupyAsyncFilesClient, path, **kwargs):
     "POST to the contents API; `kwargs` are its body and query fields."
-    return await self._op(self.api.contents.post_path, path=path, **kwargs)
+    return await self.api.contents.post_path(path=path, **kwargs)
 
 # %% ../nbs/02_files.ipynb #b42a6bd7
 @patch_to(JupyAsyncFilesClient)
 async def patch(self, path, /, **kwargs):
     "PATCH with `kwargs` as the JSON body; `path` is positional-only, freeing the name for the body."
-    return await self._op(self.api.contents.patch_path, path=path, body_=kwargs)
+    return await self.api.contents.patch_path(path=path, body_=kwargs)
 
 @patch
 async def delete(self:JupyAsyncFilesClient, path):
     "Delete a file or an empty directory."
-    return await self._op(self.api.contents.delete_path, path=path)
+    return await self.api.contents.delete_path(path=path)
 
 # %% ../nbs/02_files.ipynb #a85d5ed9
 @patch
@@ -93,12 +86,6 @@ async def copy(self:JupyAsyncFilesClient, src, to, unique=False, overwrite=True)
     "Copy and return the new model. `unique` chooses a free `name_n.ext`; `overwrite=False` requires a new file."
     return await self.post(to, overwrite=overwrite, unique=unique or None, copy_from=src)
 
-# %% ../nbs/02_files.ipynb #ee81e54e
-@patch
-async def search(self:JupyAsyncFilesClient, path='', **kwargs):
-    "The `/api/search` result for directory `path`: `kwargs` are its query parameters (`q`, `up`, `glob`, ...), documented in rustygate's DEV.md"
-    return await self._op(self.api.search.search, path=path or None, **kwargs)
-
 # %% ../nbs/02_files.ipynb #09ace5bf
 @patch
 async def edit(self:JupyAsyncFilesClient, path, f):
@@ -110,8 +97,8 @@ async def edit(self:JupyAsyncFilesClient, path, f):
 # %% ../nbs/02_files.ipynb #58b30b6d
 class JupyAsyncCellsClient(JupyAsyncFilesClient):
     "One notebook's cells over the gateway's cells API."
-    def __init__(self, base_url, path=None, token=None, headers=None, timeout=30, http_client=None, verify=True, kernel_id=None):
-        super().__init__(base_url, token=token, headers=headers, timeout=timeout, http_client=http_client, verify=verify)
+    def __init__(self, base_url, path=None, token=None, headers=None, timeout=30, http_client=None, verify=True, kernel_id=None, spec=None):
+        super().__init__(base_url, token=token, headers=headers, timeout=timeout, http_client=http_client, verify=verify, spec=spec)
         if (path is None)==(kernel_id is None): raise ValueError('Pass path or kernel_id')
         self.path,self.kernel_id = None if path is None else str(path),kernel_id
 
@@ -140,15 +127,14 @@ async def view(
     max_tokens=None, # Then keep the newest cells whose approximate token counts total at most this many
     context=None, # Also return this many neighbours either side of each kept cell; `matched` in the result names the true matches
     fields=None, # Comma-separated cell fields; '*' includes attachments, 'meta' adds notebook metadata; None omits attachments
-    up=None, # Notebook name to also read from this notebook's folder and each ancestor folder, returned as `inherited`
-    refs=False, # Add `refs`, the `vars`, `cmds` and `tools` that sigils reference in the returned cells?
+    compare=None, # Compare inputs with this Git ref; returns its resolved commit and computed cell change fields
 ):
-    "The selected cells with their notebook path, requested metadata and matched ids."
-    return await self._op(self.api.cells.get_cells if self.kernel_id is None else self.api.kernels.get_kernel_cells,
+    "The selected cells with their notebook path, requested metadata, matched ids and comparison commit."
+    return await (self.api.cells.get_cells if self.kernel_id is None else self.api.kernels.get_kernel_cells)(
         **(dict(path=self.path) if self.kernel_id is None else dict(kid=self.kernel_id)),
         ids=_cs(ids), idx=_cs(idx), section=section, ancestors=ancestors, before=before, after=after, q=q, cell_type=cell_type,
         meta=None if meta is None else json.dumps(meta), meta_not=None if meta_not is None else json.dumps(meta_not),
-        limit=limit, max_tokens=max_tokens, context=context, fields=fields, up=up, refs=refs or None)
+        limit=limit, max_tokens=max_tokens, context=context, fields=fields, compare=compare)
 
 @patch
 @delegates(JupyAsyncCellsClient.view)
@@ -160,7 +146,7 @@ async def cells(self:JupyAsyncCellsClient, ids=None, **kwargs):
 @patch
 async def apply(self:JupyAsyncCellsClient, ops):
     "Apply `ops` in order, returning ids of added cells."
-    m = await self._op(self.api.cells.post_cells if self.kernel_id is None else self.api.kernels.post_kernel_cells,
+    m = await (self.api.cells.post_cells if self.kernel_id is None else self.api.kernels.post_kernel_cells)(
         **(dict(path=self.path) if self.kernel_id is None else dict(kid=self.kernel_id)), ops=ops)
     return m['added_ids']
 

@@ -11,11 +11,11 @@ license = "Apache-2.0"
 authors = [{name = "Jeremy Howard"}]
 dynamic = ["version"]
 dependencies = [
-  "jupywire>=0.1.12",
+  "jupywire>=0.1.14",
   "fasttransport>=0.0.2",
   "fastcore>=2.1.17",
   "websockets>=13",
-  "fastspec>=0.2.4",
+  "fastspec>=0.2.6",
 ]
 
 [project.urls]
@@ -34,7 +34,7 @@ dev = [
   "jupyter_server>=2",
   "ipykernel",
   "pytest-timeout",
-  "rustygate>=0.1.23",
+  "rustygate>=0.1.25",
   "ipymini>=0.1.23",
   "ipyfuncs>=0.0.1",
 ]

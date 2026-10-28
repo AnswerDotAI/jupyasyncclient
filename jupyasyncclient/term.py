@@ -35,8 +35,8 @@ from .core import KernelApi, _join_url
 # %% ../nbs/01_term.ipynb #53b412c9
 class JupyAsyncTerminalClient(KernelApi):
     "One gateway terminal: REST lifecycle through the spec ops on `api`, plus one ws attachment."
-    def __init__(self, base_url, name=None, token=None, headers=None, timeout=30, http_client=None, verify=True):
-        super().__init__(base_url, token=token, headers=headers, timeout=timeout, http_client=http_client, verify=verify)
+    def __init__(self, base_url, name=None, token=None, headers=None, timeout=30, http_client=None, verify=True, spec=None):
+        super().__init__(base_url, token=token, headers=headers, timeout=timeout, http_client=http_client, verify=verify, spec=spec)
         self.name,self._ws = name,None
 
     def _tpath(self, name=''): return f'/api/terminals/{name}' if name else '/api/terminals'
