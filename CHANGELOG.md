@@ -2,6 +2,13 @@
 
 <!-- do not remove -->
 
+## 0.2.21
+
+### New Features
+
+- Use jupywire `to_frame`/`from_frame`, fail waits on ws loss with `on_reconnect` hook, add spec/`default_timeout` options, drop files search/`_op` ([#32](https://github.com/AnswerDotAI/jupyasyncclient/issues/32))
+
+
 ## 0.2.20
 
 ### Bugs Squashed
