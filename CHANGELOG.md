@@ -2,6 +2,13 @@
 
 <!-- do not remove -->
 
+## 0.2.23
+
+### New Features
+
+- Add comm-based HTTP transport and request helpers, bundle public Jupyter-subset spec, pass `body_`/`query_` args, require spec for cells client ([#34](https://github.com/AnswerDotAI/jupyasyncclient/issues/34))
+
+
 ## 0.2.22
 
 ### New Features
