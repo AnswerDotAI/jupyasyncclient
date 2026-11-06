@@ -27,18 +27,18 @@ class JupyAsyncFilesClient(KernelApi):
 @patch
 async def get(self:JupyAsyncFilesClient, path='', **kwargs):
     "The model at `path`; `kwargs` become query parameters, e.g. `fields`."
-    if not path: return await self.api.contents.get_root(**kwargs)
-    return await self.api.contents.get_path(path=path, **kwargs)
+    if not path: return await self.api.contents.get_root(query_=kwargs)
+    return await self.api.contents.get_path(path=path, query_=kwargs)
 
 @patch
-async def put(self:JupyAsyncFilesClient, path, **kwargs):
-    "PUT to the contents API; `kwargs` are its body and query fields."
-    return await self.api.contents.put_path(path=path, **kwargs)
+async def put(self:JupyAsyncFilesClient, path, overwrite=None, unique=None, parents=None, **kwargs):
+    "PUT to the contents API; `kwargs` are its JSON body."
+    return await self.api.contents.put_path(path=path, query_=dict(overwrite=overwrite, unique=unique, parents=parents), body_=kwargs)
 
 @patch
-async def post(self:JupyAsyncFilesClient, path, **kwargs):
-    "POST to the contents API; `kwargs` are its body and query fields."
-    return await self.api.contents.post_path(path=path, **kwargs)
+async def post(self:JupyAsyncFilesClient, path, overwrite=None, unique=None, **kwargs):
+    "POST to the contents API; `kwargs` are its JSON body."
+    return await self.api.contents.post_path(path=path, query_=dict(overwrite=overwrite, unique=unique), body_=kwargs)
 
 # %% ../nbs/02_files.ipynb #b42a6bd7
 @patch_to(JupyAsyncFilesClient)
@@ -97,7 +97,7 @@ async def edit(self:JupyAsyncFilesClient, path, f):
 # %% ../nbs/02_files.ipynb #58b30b6d
 class JupyAsyncCellsClient(JupyAsyncFilesClient):
     "One notebook's cells over the gateway's cells API."
-    def __init__(self, base_url, path=None, token=None, headers=None, timeout=30, http_client=None, verify=True, kernel_id=None, spec=None):
+    def __init__(self, base_url, path=None, token=None, headers=None, timeout=30, http_client=None, verify=True, kernel_id=None, *, spec):
         super().__init__(base_url, token=token, headers=headers, timeout=timeout, http_client=http_client, verify=verify, spec=spec)
         if (path is None)==(kernel_id is None): raise ValueError('Pass path or kernel_id')
         self.path,self.kernel_id = None if path is None else str(path),kernel_id

@@ -13,5 +13,6 @@ from .manager import JupyAsyncKernelManager, start_new_server_kernel
 from .multimanager import JupyAsyncMultiKernelManager
 from .term import JupyAsyncTerminalClient
 from .files import JupyAsyncFilesClient, JupyAsyncCellsClient, apply_ops
+from .http import CommTransport, http_client, request_json
 
-__all__ = ["JupyAsyncKernelClient", "JmsgQueues", "DeadKernelError", "JupyAsyncKernelManager", "JupyAsyncMultiKernelManager", "JupyAsyncTerminalClient", "JupyAsyncFilesClient", "JupyAsyncCellsClient", "apply_ops", "start_new_server_kernel"]
+__all__ = ["JupyAsyncKernelClient", "JmsgQueues", "DeadKernelError", "JupyAsyncKernelManager", "JupyAsyncMultiKernelManager", "JupyAsyncTerminalClient", "JupyAsyncFilesClient", "JupyAsyncCellsClient", "apply_ops", "start_new_server_kernel", "CommTransport", "http_client", "request_json"]

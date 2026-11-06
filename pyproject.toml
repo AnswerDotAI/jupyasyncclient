@@ -15,7 +15,8 @@ dependencies = [
   "fasttransport>=0.0.2",
   "fastcore>=2.1.17",
   "websockets>=13",
-  "fastspec>=0.2.6",
+  "fastspec>=0.2.7",
+  "comm",
 ]
 
 [project.urls]

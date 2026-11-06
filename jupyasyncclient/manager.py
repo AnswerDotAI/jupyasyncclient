@@ -20,7 +20,7 @@ class JupyAsyncKernelManager(KernelApi):
         return self.kernel_id
 
     async def start_kernel(self, kernel_name=None, **kwargs):
-        model = await self.api.kernels.create_kernel(name=kernel_name or self.kernel_name, **kwargs)
+        model = await self.api.kernels.create_kernel(name=kernel_name or self.kernel_name, body_=kwargs)
         self.kernel_id = model["id"]
         self.kernel_name = model.get("name", kernel_name or self.kernel_name)
         return model

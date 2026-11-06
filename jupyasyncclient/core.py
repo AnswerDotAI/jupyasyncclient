@@ -41,9 +41,10 @@ def rg_spec():
     from jupyasyncclient.rg_spec import spec
     return SpecParser.from_dict(spec)
 
-def build_spec(nm='jupyasyncclient/rg_spec.py', url='http://localhost:8787'):
-    "Regenerate the compact spec module `rg_spec.py` from a running rustygate's `/openapi.json`."
-    SpecParser.from_openapi(dict2obj(json.loads(urlread(f'{url}/openapi.json')))).save(nm)
+def build_spec(nm='jupyasyncclient/rg_spec.py', url='http://localhost:8787', spec=None):
+    "Write the compact spec module from an OpenAPI dict, or a gateway's `/openapi.json` when omitted."
+    if spec is None: spec = json.loads(urlread(f'{url}/openapi.json'))
+    SpecParser.from_openapi(dict2obj(spec)).save(nm)
 
 class KernelApi:
     "Shared HTTP plumbing for the Jupyter kernels API: one transport, and the spec-generated ops on `api`."
@@ -111,7 +112,7 @@ def stop_channels(self: JupyAsyncKernelClient):
 async def start_kernel(self:JupyAsyncKernelClient, kernel_name="py", **kwargs):
     for k in ('path', 'cwd'):
         if kwargs.get(k) is not None: kwargs[k] = str(kwargs[k])
-    response = await self.api.kernels.create_kernel(name=kernel_name, raw_=True, **kwargs)
+    response = await self.api.kernels.create_kernel(name=kernel_name, raw_=True, body_=kwargs)
     model = dict2obj(response.json())
     self.kernel_id,self.owned = model['id'],response.status_code == 201
     return model
@@ -147,7 +148,7 @@ async def is_alive(self: JupyAsyncKernelClient):
 @patch
 async def kernel_for(self: KernelApi, path):
     "The non-dead kernel model bound to notebook `path`, or None"
-    ms = await self.api.kernels.list_kernels(path=str(path))
+    ms = await self.api.kernels.list_kernels(query_=dict(path=str(path)))
     return next((m for m in ms if m['execution_state'] != 'dead'), None)
 
 # %% ../nbs/00_core.ipynb #0e8ce8d5

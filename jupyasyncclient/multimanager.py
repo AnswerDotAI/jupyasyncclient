@@ -19,12 +19,12 @@ class JupyAsyncMultiKernelManager(KernelApi):
         self._kernels,self._owned,self._keys = {},set(),{}
 
     @delegates(op_func(rg_spec(), 'list_kernels'))
-    async def list_kernels(self, **kwargs): return await self.api.kernels.list_kernels(**kwargs)
+    async def list_kernels(self, **kwargs): return await self.api.kernels.list_kernels(query_=kwargs)
     async def list_kernel_ids(self): return [k["id"] for k in await self.list_kernels()]
 
     @delegates(op_func(rg_spec(), 'create_kernel'), but=['name'])
     async def start_kernel(self, kernel_name=None, **kwargs):
-        model = await self.api.kernels.create_kernel(name=kernel_name or self.kernel_name, **kwargs)
+        model = await self.api.kernels.create_kernel(name=kernel_name or self.kernel_name, body_=kwargs)
         self._owned.add(model["id"])
         return model["id"]
 

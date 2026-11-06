@@ -44,7 +44,7 @@ class JupyAsyncTerminalClient(KernelApi):
 
     async def start_terminal(self, **kw):
         "Create a terminal (gateway creation options pass through) and bind its name."
-        model = await self.api.terminals.create_term(**kw)
+        model = await self.api.terminals.create_term(body_=kw)
         self.name = model['name']
         return model
 
