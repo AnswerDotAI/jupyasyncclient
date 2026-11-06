@@ -2,6 +2,13 @@
 
 <!-- do not remove -->
 
+## 0.2.22
+
+### New Features
+
+- Add frontmatter, import, caller, refresh and `run_cells` endpoints to API spec ([#33](https://github.com/AnswerDotAI/jupyasyncclient/issues/33))
+
+
 ## 0.2.21
 
 ### New Features
