@@ -151,6 +151,13 @@ async def apply(self:JupyAsyncCellsClient, ops):
     return m['added_ids']
 
 @patch
+async def command(self:JupyAsyncCellsClient, op, **kwargs):
+    "Apply a semantic message command, returning ids of added cells."
+    m = await self.api.messages.post_messages(op=op,
+        **(dict(path=self.path) if self.kernel_id is None else dict(kid=self.kernel_id)), body_=kwargs)
+    return m['added_ids']
+
+@patch
 async def _lookup(self:JupyAsyncCellsClient, ids):
     one = isinstance(ids, str)
     want = [ids] if one else list(ids)
@@ -160,7 +167,7 @@ async def _lookup(self:JupyAsyncCellsClient, ids):
 
 # %% ../nbs/02_files.ipynb #c4eec70d
 def _update_cell(cell, fields):
-    cell.update({k:v for k,v in fields.items() if k not in ('op','id')})
+    cell.update({k:v for k,v in fields.items() if k not in ('op','id','output_changed') and (k!='outputs' or fields.get('output_changed'))})
     if cell['cell_type']=='code':
         cell.setdefault('outputs', [])
         cell.setdefault('execution_count', None)
@@ -168,25 +175,34 @@ def _update_cell(cell, fields):
         cell.pop('outputs', None)
         cell.pop('execution_count', None)
 
+def _insert_cells(cells, rows, op):
+    ids = [c['id'] for c in cells]
+    anchor = op.get('after') or op.get('before')
+    at = ids.index(anchor) + bool(op.get('after')) if anchor in ids else len(cells)
+    cells[at:at] = rows
+
 # %% ../nbs/02_files.ipynb #0d2b9fa0
 def apply_ops(cells, ops):
     "Apply cell broadcast operations in order to `cells` in place and return that list."
     for o in ops:
         ids = [c['id'] for c in cells]
         op = o['op']
-        if op=='update' and o['id'] in ids: _update_cell(cells[ids.index(o['id'])], o)
+        if op=='move':
+            by_id = {c['id']:c for c in cells}
+            rows = [by_id[i] for i in o['ids'] if i in by_id]
+            cells[:] = [c for c in cells if c['id'] not in o['ids']]
+            _insert_cells(cells, rows, o)
+        elif op=='update' and o['id'] in ids: _update_cell(cells[ids.index(o['id'])], o)
         elif op in ('add','update'):
-            c = dict(o['cell']) if op=='add' else {k:v for k,v in o.items() if k!='op'}
-            if c.get('id') in ids: _update_cell(cells[ids.index(c['id'])], c)
+            c = dict(o['cell']) if op=='add' else {k:v for k,v in o.items() if k not in ('op','output_changed')}
+            if c.get('id') in ids: _update_cell(cells[ids.index(c['id'])], c | dict(output_changed=o.get('output_changed', False)))
             else:
                 c.setdefault('cell_type', 'code')
                 c.setdefault('metadata', {})
                 if c['cell_type']=='code':
                     c.setdefault('outputs', [])
                     c.setdefault('execution_count', None)
-                anchor = o.get('after') or o.get('before')
-                at = ids.index(anchor) + bool(o.get('after')) if anchor in ids else len(cells)
-                cells.insert(at, c)
+                _insert_cells(cells, [c], o)
         elif op=='delete':
             if o['id'] in ids: del cells[ids.index(o['id'])]
         elif op=='meta': pass
