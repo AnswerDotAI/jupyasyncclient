@@ -2,6 +2,13 @@
 
 <!-- do not remove -->
 
+## 0.2.24
+
+### New Features
+
+- Add command method for semantic message ops, move op in `apply_ops`, and honor `output_changed` so updates keep live outputs ([#35](https://github.com/AnswerDotAI/jupyasyncclient/issues/35))
+
+
 ## 0.2.23
 
 ### New Features
