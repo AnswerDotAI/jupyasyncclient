@@ -11,7 +11,7 @@ license = "Apache-2.0"
 authors = [{name = "Jeremy Howard"}]
 dynamic = ["version"]
 dependencies = [
-  "jupywire>=0.1.14",
+  "jupywire>=0.1.15",
   "fasttransport>=0.0.2",
   "fastcore>=2.1.17",
   "websockets>=13",

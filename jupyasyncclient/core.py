@@ -248,14 +248,15 @@ async def wait_for_ready(self: JupyAsyncKernelClient, timeout=None):
 
 # %% ../nbs/00_core.ipynb #7daa3f7a
 @patch
-def execute(self: JupyAsyncKernelClient, code, silent=False, store_history=True, user_expressions=None, allow_stdin=None, stop_on_error=True,
-    msg_id=None, metadata=None, subshell_id=None, buffers=None):
+def execute(self: JupyAsyncKernelClient, code='', silent=False, store_history=True, user_expressions=None, allow_stdin=None, stop_on_error=True,
+    msg_id=None, metadata=None, subshell_id=None, buffers=None, cell_id=None):
     "Queue an `execute_request` without waiting for a reply; return its msg_id."
     user_expressions = {} if user_expressions is None else user_expressions
     allow_stdin = self.allow_stdin if allow_stdin is None else allow_stdin
-    if not isinstance(code, str): raise ValueError(f"code {code!r} must be a string")
+    if cell_id is None and not isinstance(code, str): raise ValueError(f"code {code!r} must be a string")
     validate_string_dict(user_expressions)
-    return self._exec_req("execute_request", dict(code=code, silent=silent, store_history=store_history, user_expressions=user_expressions,
+    content = dict(code=code) if cell_id is None else dict(cell_id=cell_id)
+    return self._exec_req("execute_request", content | dict(silent=silent, store_history=store_history, user_expressions=user_expressions,
         allow_stdin=allow_stdin, stop_on_error=stop_on_error), metadata=metadata, subshell_id=subshell_id, msg_id=msg_id, buffers=buffers)
 
 # %% ../nbs/00_core.ipynb #d75ce9da
@@ -320,9 +321,9 @@ def shutdown(self: JupyAsyncKernelClient, restart=False, timeout=None):
 
 # %% ../nbs/00_core.ipynb #1239b481
 @patch(cls_method=True)
-async def connect(cls:JupyAsyncKernelClient, base_url, kernel=None, token=None, timeout=60, verify=True, default_timeout=None, **kw):
+async def connect(cls:JupyAsyncKernelClient, base_url, kernel=None, token=None, timeout=60, verify=True, default_timeout=None, headers=None, **kw):
     "Return a ready client; only a newly created kernel is owned."
-    self = cls(base_url, kernel_id=kernel, token=token, verify=verify, default_timeout=default_timeout)
+    self = cls(base_url, kernel_id=kernel, token=token, headers=headers, verify=verify, default_timeout=default_timeout)
     if kernel is None: await self.start_kernel(**kw)
     self.start_channels()
     await self.wait_for_ready(timeout=timeout)
