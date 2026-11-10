@@ -2,6 +2,13 @@
 
 <!-- do not remove -->
 
+## 0.2.25
+
+### New Features
+
+- Add `cell_id` support to execute for running saved cells, headers param to connect ([#36](https://github.com/AnswerDotAI/jupyasyncclient/issues/36))
+
+
 ## 0.2.24
 
 ### New Features
