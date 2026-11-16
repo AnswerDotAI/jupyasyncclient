@@ -1,5 +1,6 @@
 spec = {'base_url': '',
  'ops': [{'group': 'contents', 'name': 'get_root', 'path': '/api/contents', 'verb': 'GET'},
+         {'group': 'contents', 'name': 'post_root', 'path': '/api/contents', 'verb': 'POST', 'body_params': ['copy_from'], 'request_content_type': 'application/json', 'required_params': ['copy_from'], 'param_types': {'copy_from': 'str'}},
          {'group': 'contents', 'name': 'get_path', 'path': '/api/contents/{path}', 'verb': 'GET', 'route_params': ['path'], 'required_params': ['path'], 'param_types': {'path': 'str'}},
          {'group': 'contents', 'name': 'post_path', 'path': '/api/contents/{path}', 'verb': 'POST', 'route_params': ['path'], 'body_params': ['copy_from'], 'request_content_type': 'application/json', 'required_params': ['copy_from', 'path'], 'param_types': {'path': 'str', 'copy_from': 'str'}},
          {'group': 'contents',

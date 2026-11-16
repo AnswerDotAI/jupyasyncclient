@@ -36,9 +36,11 @@ async def put(self:JupyAsyncFilesClient, path, overwrite=None, unique=None, pare
     return await self.api.contents.put_path(path=path, query_=dict(overwrite=overwrite, unique=unique, parents=parents), body_=kwargs)
 
 @patch
-async def post(self:JupyAsyncFilesClient, path, overwrite=None, unique=None, **kwargs):
+async def post(self:JupyAsyncFilesClient, path='', overwrite=None, unique=None, extract=None, delete_source=None, **kwargs):
     "POST to the contents API; `kwargs` are its JSON body."
-    return await self.api.contents.post_path(path=path, query_=dict(overwrite=overwrite, unique=unique), body_=kwargs)
+    params = dict(overwrite=overwrite, unique=unique, extract=extract, delete_source=delete_source)
+    if not path: return await self.api.contents.post_root(query_=params, body_=kwargs)
+    return await self.api.contents.post_path(path=path, query_=params, body_=kwargs)
 
 # %% ../nbs/02_files.ipynb #b42a6bd7
 @patch_to(JupyAsyncFilesClient)
@@ -82,9 +84,9 @@ async def rename(self:JupyAsyncFilesClient, path, to):
     return await self.patch(path, path=to)
 
 @patch
-async def copy(self:JupyAsyncFilesClient, src, to, unique=False, overwrite=True):
+async def copy(self:JupyAsyncFilesClient, src, to='', unique=False, overwrite=True, extract=None, delete_source=None):
     "Copy and return the new model. `unique` chooses a free `name_n.ext`; `overwrite=False` requires a new file."
-    return await self.post(to, overwrite=overwrite, unique=unique or None, copy_from=src)
+    return await self.post(to, overwrite=overwrite, unique=unique or None, extract=extract, delete_source=delete_source, copy_from=src)
 
 # %% ../nbs/02_files.ipynb #09ace5bf
 @patch
