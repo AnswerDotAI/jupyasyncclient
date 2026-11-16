@@ -2,6 +2,13 @@
 
 <!-- do not remove -->
 
+## 0.2.26
+
+### New Features
+
+- Add extract and `delete_source` options to post/copy, support root destination via `post_root` ([#37](https://github.com/AnswerDotAI/jupyasyncclient/issues/37))
+
+
 ## 0.2.25
 
 ### New Features
