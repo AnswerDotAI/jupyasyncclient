@@ -2,6 +2,13 @@
 
 <!-- do not remove -->
 
+## 0.2.27
+
+### New Features
+
+- Remove kernel managers in favor of JupyAsyncKernelClient.connect, clean up on failed connect, add per-request headers_ to start/restart ([#38](https://github.com/AnswerDotAI/jupyasyncclient/issues/38))
+
+
 ## 0.2.26
 
 ### New Features
