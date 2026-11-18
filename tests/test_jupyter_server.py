@@ -1,14 +1,13 @@
 import asyncio, pytest
-from jupyasyncclient import JmsgQueues, start_new_server_kernel
+from jupyasyncclient import JmsgQueues, JupyAsyncKernelClient
 from jupywire.route import DeadKernelError
 
 TIMEOUT = 5
 
 
 async def test_walkthrough(jp_server):
-    "The reference-server end-to-end: start through the manager, execute, answer stdin, shut down."
-    km,kc = await start_new_server_kernel(jp_server["base_url"], startup_timeout=TIMEOUT)
-    try:
+    "The reference-server end-to-end: connect, execute, answer stdin, shut down."
+    async with await JupyAsyncKernelClient.connect(jp_server["base_url"], timeout=TIMEOUT) as kc:
         qs = JmsgQueues(kc, queues=("jmsg",), merge=dict(iopub="jmsg", stdin="jmsg"))
         rep = await kc.reply("print('hello'); 6*7", timeout=TIMEOUT)
         assert rep["content"]["status"] == "ok"
@@ -16,15 +15,11 @@ async def test_walkthrough(jp_server):
         await qs.jmsg_for("input_request", timeout=TIMEOUT)
         kc.input("test")
         assert (await task)["content"]["status"] == "ok"
-    finally:
-        await kc.aclose()
-        await km.shutdown_kernel(now=True)
 
 
 async def test_reconnect_ends_old_work_and_gives_up_when_kernel_dies(jp_server):
     "A gap ends old work without resending it; redial serves new work or reports that the kernel is gone."
-    km,kc = await start_new_server_kernel(jp_server["base_url"], startup_timeout=TIMEOUT)
-    try:
+    async with await JupyAsyncKernelClient.connect(jp_server["base_url"], timeout=TIMEOUT) as kc:
         reconnected, qs = asyncio.Event(), JmsgQueues(kc)
         kc.on_reconnect = reconnected.set
         t = asyncio.create_task(kc.reply(r"import time; time.sleep(1); count = globals().get('count', 0) + 1", timeout=30))
@@ -44,4 +39,3 @@ async def test_reconnect_ends_old_work_and_gives_up_when_kernel_dies(jp_server):
         with pytest.raises((ConnectionError, DeadKernelError)): await t
         await reader
         with pytest.raises(DeadKernelError, match="gone"): await kc._start_task
-    finally: await kc.aclose()

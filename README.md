@@ -7,16 +7,10 @@
 
 Kernel creation, interruption, restart, and deletion use HTTP. Each client exchanges messages over one websocket. Sends await the websocket transport. The client does not depend on zmq or tornado.
 
-Three classes provide jupyter_client-style interfaces:
+[`JupyAsyncKernelClient`](https://AnswerDotAI.github.io/jupyasyncclient/core.html#jupyasynckernelclient) manages one kernel’s lifecycle, channels, and messages. The [core notebook](https://AnswerDotAI.github.io/jupyasyncclient/core.html) builds it bottom-up and demonstrates every method against a live server. Two other notebooks cover gateway APIs:
 
-- [`JupyAsyncKernelClient`](https://AnswerDotAI.github.io/jupyasyncclient/core.html#jupyasynckernelclient) manages one kernel’s lifecycle, channels, and messages.
-- `JupyAsyncKernelManager` starts and stops one kernel and creates clients for it.
-- `JupyAsyncMultiKernelManager` manages multiple kernels. `ensure_kernel('some-key')` returns the live kernel registered under that key or starts one.
-
-The [core notebook](00_core.ipynb) builds the client bottom-up and demonstrates every method against a live server. The managers are HTTP wrappers in plain modules. Two other notebooks cover gateway APIs:
-
-- [term](01_term.ipynb) demonstrates [`JupyAsyncTerminalClient`](https://AnswerDotAI.github.io/jupyasyncclient/term.html#jupyasyncterminalclient) for gateway-hosted terminals.
-- [files](02_files.ipynb) builds [`JupyAsyncFilesClient`](https://AnswerDotAI.github.io/jupyasyncclient/files.html#jupyasyncfilesclient) and [`JupyAsyncCellsClient`](https://AnswerDotAI.github.io/jupyasyncclient/files.html#jupyasynccellsclient) over the files and cells APIs. It includes [`apply_ops`](https://AnswerDotAI.github.io/jupyasyncclient/files.html#apply_ops) for updating a local view from a kernel’s change broadcasts.
+- [term](https://AnswerDotAI.github.io/jupyasyncclient/term.html) demonstrates [`JupyAsyncTerminalClient`](https://AnswerDotAI.github.io/jupyasyncclient/term.html#jupyasyncterminalclient) for gateway-hosted terminals.
+- [files](https://AnswerDotAI.github.io/jupyasyncclient/files.html) builds [`JupyAsyncFilesClient`](https://AnswerDotAI.github.io/jupyasyncclient/files.html#jupyasyncfilesclient) and [`JupyAsyncCellsClient`](https://AnswerDotAI.github.io/jupyasyncclient/files.html#jupyasynccellsclient) over the files and cells APIs. It includes [`apply_ops`](https://AnswerDotAI.github.io/jupyasyncclient/files.html#apply_ops) for updating a local view from a kernel’s change broadcasts.
 
 [`JupyAsyncCellsClient.view`](https://AnswerDotAI.github.io/jupyasyncclient/files.html#jupyasynccellsclient.view) returns selected cells with the current notebook path and requested metadata. `cells` returns the selected cell list. Both accept a filename or a kernel binding through the client constructor.
 
@@ -54,10 +48,10 @@ g
 
     <Gateway http://127.0.0.1:60487 pid=47781 up>
 
-`start_new_server_kernel` starts a kernel and returns its manager and a ready client. This example uses a single `jmsg` queue for iopub and stdin messages:
+[`JupyAsyncKernelClient.connect`](https://AnswerDotAI.github.io/jupyasyncclient/core.html#jupyasynckernelclient.connect) returns a ready client. This example uses a single `jmsg` queue for iopub and stdin messages:
 
 ``` python
-km, kc = await start_new_server_kernel(g.url)
+kc = await JupyAsyncKernelClient.connect(g.url)
 qs = JmsgQueues(kc, queues=('jmsg',), merge=dict(iopub='jmsg', stdin='jmsg'))
 rep = await kc.reply("print('hello'); 6*7", timeout=30)
 rep['content']['status']
@@ -77,7 +71,7 @@ m['content']['text']
 Calling `input()` in the kernel produces an `input_request` on the stdin channel. Answer with the client’s `input` method. It sets the reply’s parent to the request:
 
 ``` python
-fut = asyncio.ensure_future(kc.reply("name = input('who? ')", timeout=30))
+fut = asyncio.ensure_future(kc.reply("name = input('who? ')", allow_stdin=True, timeout=30))
 prompt = await qs.jmsg_for('input_request', timeout=15)
 kc.input('Jeremy')
 (await fut)['content']['status']
@@ -96,21 +90,8 @@ rep['content']['status']
 
     'ok'
 
-Use the multimanager to keep a kernel for each named task. Repeated calls to `ensure_kernel` with the same key reuse its live kernel:
-
 ``` python
-mkm = JupyAsyncMultiKernelManager(g.url)
-k1 = await mkm.ensure_kernel('analysis')
-k2 = await mkm.ensure_kernel('analysis')
-k1 == k2
+await kc.shutdown_kernel()
 ```
 
-    True
-
-``` python
-await kc.aclose()
-await km.shutdown_kernel()
-await mkm.shutdown_all()
-```
-
-Pass `token=...` to any of the three classes when the server requires a bearer token. HTTP requests send it in the `Authorization` header. Websocket connections send it as a query parameter.
+Pass `token=...` to a client when the server requires a bearer token. HTTP requests send it in the `Authorization` header. Websocket connections send it as a query parameter.

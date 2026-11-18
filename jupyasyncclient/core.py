@@ -109,10 +109,10 @@ def stop_channels(self: JupyAsyncKernelClient):
 
 # %% ../nbs/00_core.ipynb #1263d477
 @patch
-async def start_kernel(self:JupyAsyncKernelClient, kernel_name="py", **kwargs):
+async def start_kernel(self:JupyAsyncKernelClient, kernel_name="py", *, headers_=None, **kwargs):
     for k in ('path', 'cwd'):
         if kwargs.get(k) is not None: kwargs[k] = str(kwargs[k])
-    response = await self.api.kernels.create_kernel(name=kernel_name, raw_=True, body_=kwargs)
+    response = await self.api.kernels.create_kernel(name=kernel_name, raw_=True, body_=kwargs, headers_=headers_)
     model = dict2obj(response.json())
     self.kernel_id,self.owned = model['id'],response.status_code == 201
     return model
@@ -128,9 +128,8 @@ async def shutdown_kernel(self: JupyAsyncKernelClient):
 async def interrupt_kernel(self: JupyAsyncKernelClient):
     if self.kernel_id: return await self.api.kernels.interrupt(kid=self.kernel_id)
 @patch
-async def restart_kernel(self: JupyAsyncKernelClient):
-    if self.kernel_id: return await self.api.kernels.restart(kid=self.kernel_id)
-
+async def restart_kernel(self: JupyAsyncKernelClient, *, headers_=None):
+    if self.kernel_id: return await self.api.kernels.restart(kid=self.kernel_id, headers_=headers_)
 
 # %% ../nbs/00_core.ipynb #3a76e29a
 @patch
@@ -321,12 +320,16 @@ def shutdown(self: JupyAsyncKernelClient, restart=False, timeout=None):
 
 # %% ../nbs/00_core.ipynb #1239b481
 @patch(cls_method=True)
-async def connect(cls:JupyAsyncKernelClient, base_url, kernel=None, token=None, timeout=60, verify=True, default_timeout=None, headers=None, **kw):
+async def connect(cls:JupyAsyncKernelClient, base_url, kernel=None, token=None, timeout=60, verify=True, default_timeout=None, headers=None, **kwargs):
     "Return a ready client; only a newly created kernel is owned."
     self = cls(base_url, kernel_id=kernel, token=token, headers=headers, verify=verify, default_timeout=default_timeout)
-    if kernel is None: await self.start_kernel(**kw)
-    self.start_channels()
-    await self.wait_for_ready(timeout=timeout)
+    try:
+        if kernel is None: await self.start_kernel(**kwargs)
+        self.start_channels()
+        await self.wait_for_ready(timeout=timeout)
+    except BaseException:
+        await self.__aexit__()
+        raise
     return self
 
 @patch
