@@ -8,7 +8,7 @@ Docs: https://AnswerDotAI.github.io/jupyasyncclient/core.html.md"""
 __all__ = ['log', 'rg_spec', 'build_spec', 'KernelApi', 'JupyAsyncKernelClient']
 
 # %% ../nbs/00_core.ipynb #a0271b3e
-import asyncio, functools, inspect, json, logging, os, ssl, time, uuid, websockets
+import asyncio, functools, inspect, json, logging, os, time, uuid, httpx2, websockets
 from fasttransport.core import AsyncTransport
 from fastspec.oapi import OpenAPIClient, SpecParser
 from fasttransport.errors import APIError
@@ -57,11 +57,8 @@ class KernelApi:
         self.api = OpenAPIClient(self.spec, transport=self.transport, base_url=self.base_url)
 
     def _ws_ssl(self, url):
-        "An unverified ssl context when `verify=False` and `url` is wss, else None for the library default."
-        if self.verify or not url.startswith('wss'): return None
-        ctx = ssl.create_default_context()
-        ctx.check_hostname,ctx.verify_mode = False,ssl.CERT_NONE
-        return ctx
+        "The websocket `ssl` argument for `url`: the context httpx2 builds from `verify`, as for the HTTP transport; None for ws."
+        return httpx2.create_ssl_context(self.verify) if url.startswith('wss') else None  # websockets rejects any `ssl` for ws
 
     def _kpath(self, kernel_id='', suffix=''): return f"/api/kernels/{kernel_id}{suffix}" if kernel_id else '/api/kernels'
 
