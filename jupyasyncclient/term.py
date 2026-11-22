@@ -1,21 +1,22 @@
 """A client for gateway-hosted terminals: REST lifecycle plus one websocket attachment
 
-`JupyAsyncTerminalClient` connects to terminals hosted by [rustygate](https://github.com/AnswerDotAI/rustygate). An app can use it to provide a shell on the same machine and filesystem as its kernels, including inside a container. The gateway uses [ptymini](https://github.com/AnswerDotAI/ptymini) to manage the terminals.
+`JupyAsyncTerminalClient` connects to terminals hosted by [rustygate](https://github.com/AnswerDotAI/rustygate) or Jupyter Server. An app can use it to provide a shell on the same machine and filesystem as its kernels, including inside a container.
 
 The client uses `KernelApi` for terminal lifecycle requests at `/api/terminals` and a websocket for input, output and terminal controls.
 
 ## The channel
 
-`connect` opens the websocket and returns the server's `setup` frame. The gateway then replays available scrollback as binary frames.
+`connect` opens `/terminals/websocket/{name}` and returns the server's `setup` frame. The gateway then replays available scrollback as `stdout` frames.
 
-The websocket uses jupygate's protocol. Binary frames carry terminal bytes unchanged in either direction. Text frames contain JSON controls:
+The websocket uses terminado's JSON-array protocol. Every frame is a JSON text list whose first element names the message type:
 
-- The server sends `setup` when a client connects.
-- `gap` reports that the client fell behind the server's replay buffer.
-- `eof` reports the terminal's exit code.
-- The client sends `set_size` to resize the terminal.
+- The server sends `["setup", {...}]` when a client connects.
+- `["stdout", text]` carries terminal output text.
+- `["gap", bytes]` reports that the client fell behind the server's replay buffer (rustygate/jupygate extension).
+- `["disconnect", 1, ...]` reports that the terminal exited (rustygate/jupygate include the exit code as the third element).
+- The client sends `["stdin", text]` for input and `["set_size", rows, cols]` to resize the terminal.
 
-`write` sends bytes to the terminal. `resize` sends `set_size`. `frames` yields output as `bytes` and controls as dictionaries. Use one `frames` iterator per connection. Multiple iterators would compete to read the same socket.
+`write` sends `stdin` text. `resize` sends `set_size`. `frames` yields each incoming frame as a parsed list. Use one `frames` iterator per connection. Multiple iterators would compete to read the same socket.
 
 `aclose` closes this client's websocket attachment. It does not delete the terminal. Use `shutdown_terminal` to stop the terminal for all clients.
 
@@ -39,7 +40,6 @@ class JupyAsyncTerminalClient(KernelApi):
         super().__init__(base_url, token=token, headers=headers, timeout=timeout, http_client=http_client, verify=verify, spec=spec)
         self.name,self._ws = name,None
 
-    def _tpath(self, name=''): return f'/api/terminals/{name}' if name else '/api/terminals'
     async def list_terminals(self): return await self.api.terminals.list_terms()
 
     async def start_terminal(self, **kw):
@@ -53,23 +53,24 @@ class JupyAsyncTerminalClient(KernelApi):
 # %% ../nbs/01_term.ipynb #07b2b2a9
 @patch
 async def connect(self:JupyAsyncTerminalClient):
-    "Open the terminal's ws channel and return the `setup` frame; replayed scrollback follows as binary."
+    "Open `/terminals/websocket/{name}` and return the `setup` frame; replayed scrollback follows as `stdout` frames."
     params = dict(token=self.token) if self.token else None
-    url = _join_url(self.base_url, self._tpath(self.name)+'/channel', ws=True, params=params)
+    url = _join_url(self.base_url, f'/terminals/websocket/{self.name}', ws=True, params=params)
     self._ws = await websockets.connect(url, ssl=self._ws_ssl(url), additional_headers=self._headers, max_size=None)
     return json.loads(await self._ws.recv())
 
 @patch
-async def write(self:JupyAsyncTerminalClient, data:bytes): await self._ws.send(data)
+async def write(self:JupyAsyncTerminalClient, data:str):
+    await self._ws.send(json.dumps(['stdin', data]))
 
 @patch
 async def resize(self:JupyAsyncTerminalClient, rows:int, cols:int):
-    await self._ws.send(json.dumps(dict(type='set_size', rows=rows, cols=cols)))
+    await self._ws.send(json.dumps(['set_size', rows, cols]))
 
 @patch
 async def frames(self:JupyAsyncTerminalClient):
-    "Incoming frames: pty output as `bytes`, control frames as parsed dicts. Ends when the ws closes normally. A broken connection raises `websockets.ConnectionClosedError`."
-    async for frame in self._ws: yield frame if isinstance(frame, bytes) else json.loads(frame)
+    "Incoming terminado frames as parsed lists (`['stdout', text]`, `['gap', n]`, `['disconnect', ...]`). Ends when the ws closes normally. A broken connection raises `websockets.ConnectionClosedError`."
+    async for frame in self._ws: yield json.loads(frame)
 
 @patch
 async def aclose(self:JupyAsyncTerminalClient):

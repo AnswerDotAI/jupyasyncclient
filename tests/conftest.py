@@ -19,7 +19,8 @@ def jp_server(tmp_path_factory):
     base_url = f"http://127.0.0.1:{port}"
     cmd = [sys.executable, "-m", "jupyter_server", "--no-browser", f"--ServerApp.port={port}", "--ServerApp.port_retries=0",
         "--ServerApp.token=", "--ServerApp.password=", "--ServerApp.disable_check_xsrf=True", "--ServerApp.allow_root=True",
-        f"--ServerApp.root_dir={root}", "--ServerApp.open_browser=False", "--ServerApp.log_level=50"]
+        f"--ServerApp.root_dir={root}", "--ServerApp.open_browser=False", "--ServerApp.log_level=50",
+        "--ServerApp.jpserver_extensions={'jupyter_server_terminals': True}"]
 
     env = dict(os.environ)
     env.update(JUPYTER_PLATFORM_DIRS="1", JUPYTER_NO_CONFIG="1", JUPYTER_RUNTIME_DIR=str(runtime_dir),

@@ -27,4 +27,5 @@ spec = {'base_url': '',
          {'group': 'terminals', 'name': 'list_terms', 'path': '/api/terminals', 'verb': 'GET'},
          {'group': 'terminals', 'name': 'create_term', 'path': '/api/terminals', 'verb': 'POST', 'body_params': ['cwd'], 'request_content_type': 'application/json', 'param_types': {'cwd': 'str'}},
          {'group': 'terminals', 'name': 'get_term', 'path': '/api/terminals/{name}', 'verb': 'GET', 'route_params': ['name'], 'required_params': ['name'], 'param_types': {'name': 'str'}},
-         {'group': 'terminals', 'name': 'delete_term', 'path': '/api/terminals/{name}', 'verb': 'DELETE', 'route_params': ['name'], 'required_params': ['name'], 'param_types': {'name': 'str'}}]}
+         {'group': 'terminals', 'name': 'delete_term', 'path': '/api/terminals/{name}', 'verb': 'DELETE', 'route_params': ['name'], 'required_params': ['name'], 'param_types': {'name': 'str'}},
+         {'group': 'terminals', 'name': 'channel', 'path': '/terminals/websocket/{name}', 'verb': 'GET', 'route_params': ['name'], 'required_params': ['name'], 'param_types': {'name': 'str'}}]}
