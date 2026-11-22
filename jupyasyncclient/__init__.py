@@ -3,6 +3,7 @@
 Modules:
 
 - `jupyasyncclient.files`: Files and cells over the gateway's contents and cells APIs
+- `jupyasyncclient.ssh`: SSH-over-WebSocket ProxyCommand client, session store, and `.ssh/config` updater for Rustygate, Solveit, and Colab
 - `jupyasyncclient.term`: A client for gateway-hosted terminals: REST lifecycle plus one websocket attachment"""
 
 __version__ = "0.2.31"

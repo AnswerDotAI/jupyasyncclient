@@ -26,6 +26,9 @@ Documentation = "https://AnswerDotAI.github.io/jupyasyncclient/"
 [project.entry-points.nbdev]
 jupyasyncclient = "jupyasyncclient._modidx:d"
 
+[project.scripts]
+jac-ssh = "jupyasyncclient.ssh:main"
+
 [tool.nbdev]
 
 [project.optional-dependencies]

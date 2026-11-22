@@ -206,7 +206,7 @@ async def _start_ws(self: JupyAsyncKernelClient):
     params = {"session_id": self.session_id}
     if self.token: params["token"] = self.token
     ws_url = _join_url(self.base_url, self._kpath(suffix="/channels"), ws=True, params=params)
-    self._ws = await websockets.connect(ws_url, ssl=self._ws_ssl(ws_url), additional_headers=self._headers, ping_interval=30, max_size=self.max_size)
+    self._ws = await websockets.connect(ws_url, ssl=self._ws_ssl(ws_url), additional_headers=self._headers, ping_interval=30, max_size=self.max_size, open_timeout=self._timeout)
     self._send_task = asyncio.create_task(self._send_loop())
     self._recv_task = asyncio.create_task(self._recv_loop())
 
@@ -342,7 +342,7 @@ def shutdown(self: JupyAsyncKernelClient, restart=False, timeout=None):
 async def connect(cls:JupyAsyncKernelClient, base_url, kernel=None, token=None, timeout=60, verify=True,
     default_timeout=None, headers=None, refresh_headers=None, **kwargs):
     "Return a ready client; only a newly created kernel is owned."
-    self = cls(base_url, kernel_id=kernel, token=token, headers=headers, verify=verify, default_timeout=default_timeout, refresh_headers=refresh_headers)
+    self = cls(base_url, kernel_id=kernel, token=token, headers=headers, timeout=None if timeout is None else max(timeout, 30), verify=verify, default_timeout=default_timeout, refresh_headers=refresh_headers)
     try:
         if kernel is None: await self.start_kernel(**kwargs)
         self.start_channels()
