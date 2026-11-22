@@ -56,7 +56,7 @@ async def connect(self:JupyAsyncTerminalClient):
     "Open the terminal's ws channel and return the `setup` frame; replayed scrollback follows as binary."
     params = dict(token=self.token) if self.token else None
     url = _join_url(self.base_url, self._tpath(self.name)+'/channel', ws=True, params=params)
-    self._ws = await websockets.connect(url, ssl=self._ws_ssl(url), max_size=None)
+    self._ws = await websockets.connect(url, ssl=self._ws_ssl(url), additional_headers=self._headers, max_size=None)
     return json.loads(await self._ws.recv())
 
 @patch

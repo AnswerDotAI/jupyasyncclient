@@ -2,6 +2,13 @@
 
 <!-- do not remove -->
 
+## 0.2.28
+
+### Bugs Squashed
+
+- Bug fix `_ws_ssl` returns None when verify is Truthy ([#39](https://github.com/AnswerDotAI/jupyasyncclient/pull/39)), thanks to [@RensDimmendaal](https://github.com/RensDimmendaal)
+
+
 ## 0.2.27
 
 ### New Features

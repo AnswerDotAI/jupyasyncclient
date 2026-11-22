@@ -56,6 +56,11 @@ class KernelApi:
         self.spec = spec or rg_spec()
         self.api = OpenAPIClient(self.spec, transport=self.transport, base_url=self.base_url)
 
+    def set_headers(self, headers):
+        "Merge `headers` into future HTTP requests and websocket handshakes."
+        self._headers.update(headers)
+        self.transport.base_headers = self._headers
+
     def _ws_ssl(self, url):
         "The websocket `ssl` argument for `url`: the context httpx2 builds from `verify`, as for the HTTP transport; None for ws."
         return httpx2.create_ssl_context(self.verify) if url.startswith('wss') else None  # websockets rejects any `ssl` for ws
@@ -67,7 +72,7 @@ class JupyAsyncKernelClient(RouterOps, EvalOps, KernelApi):
     "AsyncKernelClient-ish API over the kernels HTTP API plus its websocket channels."
     allow_stdin = True
     def __init__(self, base_url, kernel_id=None, token=None, session_id=None, username=None, headers=None, timeout=30, http_client=None,
-        reconnect=True, reconnect_ceiling=300.0, verify=True, max_size=256*2**20, spec=None, default_timeout=None):
+        reconnect=True, reconnect_ceiling=300.0, verify=True, max_size=256*2**20, spec=None, default_timeout=None, refresh_headers=None):
         super().__init__(base_url, token=token, headers=headers, timeout=timeout, http_client=http_client, verify=verify, spec=spec)
         self.kernel_id = kernel_id
         self.owned = False    # True only when `start_kernel` created the kernel; honored by `__aexit__`
@@ -78,7 +83,7 @@ class JupyAsyncKernelClient(RouterOps, EvalOps, KernelApi):
         self.max_size,self.default_timeout = max_size,default_timeout
         self._send_q = asyncio.Queue()
         self._init_router()
-        self.on_reconnect = None
+        self.on_reconnect,self.refresh_headers = None,refresh_headers
 
     def _kpath(self, kernel_id='', suffix=''): return super()._kpath(kernel_id or self.kernel_id, suffix)
 
@@ -106,7 +111,7 @@ def stop_channels(self: JupyAsyncKernelClient):
 
 # %% ../nbs/00_core.ipynb #1263d477
 @patch
-async def start_kernel(self:JupyAsyncKernelClient, kernel_name="py", *, headers_=None, **kwargs):
+async def start_kernel(self:JupyAsyncKernelClient, kernel_name=None, *, headers_=None, **kwargs):
     for k in ('path', 'cwd'):
         if kwargs.get(k) is not None: kwargs[k] = str(kwargs[k])
     response = await self.api.kernels.create_kernel(name=kernel_name, raw_=True, body_=kwargs, headers_=headers_)
@@ -283,12 +288,29 @@ def kernel_info(self: JupyAsyncKernelClient, timeout=None): return self.kernel_i
 
 # %% ../nbs/00_core.ipynb #97540d7e
 @patch
+async def _refresh_headers(self: JupyAsyncKernelClient):
+    if not self.refresh_headers: return False
+    try:
+        h = self.refresh_headers()
+        if inspect.isawaitable(h): h = await h
+        if not h: return False
+        self.set_headers(h)
+        return True
+    except Exception:
+        log.warning("refresh_headers callback failed", exc_info=True)
+        return False
+
+@patch
 async def _reconnect(self: JupyAsyncKernelClient):
     "Redial with the same session id and notify on_reconnect; old operations are never resent."
-    deadline, delay = time.monotonic() + self.reconnect_ceiling, 0.1
+    deadline, delay, refreshed = time.monotonic() + self.reconnect_ceiling, 0.1, False
     while not self._closing:
         try: await self._start_ws()
         except Exception as e:
+            if not refreshed and await self._refresh_headers():
+                refreshed = True
+                continue
+            refreshed = False
             exc = None
             try: await self.model()
             except APIError as he:
@@ -317,9 +339,10 @@ def shutdown(self: JupyAsyncKernelClient, restart=False, timeout=None):
 
 # %% ../nbs/00_core.ipynb #1239b481
 @patch(cls_method=True)
-async def connect(cls:JupyAsyncKernelClient, base_url, kernel=None, token=None, timeout=60, verify=True, default_timeout=None, headers=None, **kwargs):
+async def connect(cls:JupyAsyncKernelClient, base_url, kernel=None, token=None, timeout=60, verify=True,
+    default_timeout=None, headers=None, refresh_headers=None, **kwargs):
     "Return a ready client; only a newly created kernel is owned."
-    self = cls(base_url, kernel_id=kernel, token=token, headers=headers, verify=verify, default_timeout=default_timeout)
+    self = cls(base_url, kernel_id=kernel, token=token, headers=headers, verify=verify, default_timeout=default_timeout, refresh_headers=refresh_headers)
     try:
         if kernel is None: await self.start_kernel(**kwargs)
         self.start_channels()
