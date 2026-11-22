@@ -2,6 +2,13 @@
 
 <!-- do not remove -->
 
+## 0.2.30
+
+### New Features
+
+- Switch JupyAsyncTerminalClient to terminado JSON-array protocol at /terminals/websocket/{name} for Jupyter Server compatibility ([#41](https://github.com/AnswerDotAI/jupyasyncclient/issues/41))
+
+
 ## 0.2.29
 
 ### Bugs Squashed
