@@ -2,6 +2,13 @@
 
 <!-- do not remove -->
 
+## 0.2.31
+
+### New Features
+
+- Add SSH-over-WebSocket client and jac-ssh CLI for Rustygate, Solveit, and Colab; propagate websocket `open_timeout` ([#42](https://github.com/AnswerDotAI/jupyasyncclient/issues/42))
+
+
 ## 0.2.30
 
 ### New Features
