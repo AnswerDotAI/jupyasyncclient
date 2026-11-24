@@ -7,11 +7,12 @@
 
 Kernel creation, interruption, restart, and deletion use HTTP. Each client exchanges messages over one websocket. Sends await the websocket transport. The client does not depend on zmq or tornado.
 
-[`JupyAsyncKernelClient`](https://AnswerDotAI.github.io/jupyasyncclient/core.html#jupyasynckernelclient) manages one kernel’s lifecycle, channels, and messages. The [core notebook](https://AnswerDotAI.github.io/jupyasyncclient/core.html) builds it bottom-up and demonstrates every method against a live server. Three other notebooks cover gateway APIs:
+[`JupyAsyncKernelClient`](https://AnswerDotAI.github.io/jupyasyncclient/core.html#jupyasynckernelclient) manages one kernel’s lifecycle, channels, and messages. The [core notebook](https://AnswerDotAI.github.io/jupyasyncclient/core.html) builds it bottom-up and demonstrates every method against a live server. Four other notebooks cover gateway APIs:
 
 - [term](https://AnswerDotAI.github.io/jupyasyncclient/term.html) demonstrates [`JupyAsyncTerminalClient`](https://AnswerDotAI.github.io/jupyasyncclient/term.html#jupyasyncterminalclient) for gateway-hosted terminals.
 - [files](https://AnswerDotAI.github.io/jupyasyncclient/files.html) builds [`JupyAsyncFilesClient`](https://AnswerDotAI.github.io/jupyasyncclient/files.html#jupyasyncfilesclient) and [`JupyAsyncCellsClient`](https://AnswerDotAI.github.io/jupyasyncclient/files.html#jupyasynccellsclient) over the files and cells APIs. It includes [`apply_ops`](https://AnswerDotAI.github.io/jupyasyncclient/files.html#apply_ops) for updating a local view from a kernel’s change broadcasts.
 - [ssh](https://AnswerDotAI.github.io/jupyasyncclient/ssh.html) bridges OpenSSH `ProxyCommand` over WebSockets, manages `~/.ssh/config`, and provides the `jac-ssh` CLI for Rustygate, Solveit, and Colab.
+- [sessions](https://AnswerDotAI.github.io/jupyasyncclient/sessions.html) builds [`JupyAsyncSessionsClient`](https://AnswerDotAI.github.io/jupyasyncclient/sessions.html#jupyasyncsessionsclient) over the standard Jupyter `/api/sessions` API.
 
 [`JupyAsyncCellsClient.view`](https://AnswerDotAI.github.io/jupyasyncclient/files.html#jupyasynccellsclient.view) returns selected cells with the current notebook path and requested metadata. `cells` returns the selected cell list. Both accept a filename or a kernel binding through the client constructor.
 
@@ -21,7 +22,7 @@ Kernel creation, interruption, restart, and deletion use HTTP. Each client excha
 pip install jupyasyncclient
 ```
 
-You also need a kernel server. These examples use rustygate serving [ipymini](https://github.com/AnswerDotAI/ipymini) kernels. The test suite also runs against a stock jupyter_server.
+You also need a kernel server. These examples use [jupygate](https://github.com/AnswerDotAI/jupygate) serving [ipymini](https://github.com/AnswerDotAI/ipymini) kernels. The test suite also runs against a stock jupyter_server.
 
 ## Use
 
@@ -39,7 +40,7 @@ Messages are standard Jupyter dictionaries with a `channel` key. The server hand
 
 ``` python
 import asyncio
-from rustygate.tools import start_gateway
+from jupyasyncclient import start_gateway
 ```
 
 ``` python

@@ -1,6 +1,6 @@
 import asyncio, time, pytest
-from jupyasyncclient import JmsgQueues, JupyAsyncKernelClient, JupyAsyncTerminalClient
-from rustygate.tools import start_gateway
+from fasttransport.errors import APIError
+from jupyasyncclient import JmsgQueues, JupyAsyncFilesClient, JupyAsyncKernelClient, JupyAsyncSessionsClient, JupyAsyncTerminalClient, start_gateway
 from jupywire.route import DeadKernelError
 
 TIMEOUT = 5
@@ -51,10 +51,10 @@ async def _read_until(fr, pat: str, timeout=TIMEOUT) -> str:
 
 
 async def test_terminal_interop(jp_server):
-    "The same terminal client works end-to-end against both reference jupyter_server and rustygate."
-    rg = start_gateway()
+    "The same terminal client works end-to-end against both reference jupyter_server and jupygate."
+    jg = start_gateway()
     try:
-        for base_url in (jp_server["base_url"], rg.url):
+        for base_url in (jp_server["base_url"], jg.url):
             tc, tc2 = JupyAsyncTerminalClient(base_url), None
             try:
                 model = await tc.start_terminal()
@@ -77,4 +77,72 @@ async def test_terminal_interop(jp_server):
             finally:
                 await tc.aclose()
                 if tc2: await tc2.aclose()
-    finally: rg.stop()
+    finally: jg.stop()
+
+
+async def test_contents_and_sessions_interop(jp_server, tmp_path):
+    "Contents, independent kernels, and sessions work identically against stock jupyter_server and jupygate."
+    jg = start_gateway(('jupygate', '--root', tmp_path))
+    try:
+        for base_url in (jp_server["base_url"], jg.url):
+            fc, sc = JupyAsyncFilesClient(base_url), JupyAsyncSessionsClient(base_url)
+            await fc.write("hello.txt", "hello")
+            assert await fc.read("hello.txt") == "hello"
+            raw = bytes(range(256))
+            await fc.write("blob.bin", raw)
+            assert await fc.read("blob.bin") == raw
+            untitled = await fc.post("", type="notebook")
+            assert untitled["type"] == "notebook"
+            nb = dict(cells=[dict(cell_type="code", source="6*7", metadata={}, outputs=[], execution_count=None)], metadata={}, nbformat=4, nbformat_minor=5)
+            await fc.write("demo.ipynb", nb)
+            assert (await fc.read("demo.ipynb", type="notebook"))["cells"][0]["source"] == "6*7"
+            assert isinstance(await fc.read("demo.ipynb"), str)
+            await fc.mkdir("sub")
+            await fc.copy("hello.txt", "sub")
+            await fc.rename("sub/hello.txt", "sub/renamed.txt")
+            with pytest.raises(APIError) as ei: await fc.rename("sub/renamed.txt", "hello.txt")
+            assert ei.value.status_code == 409
+            assert [e["name"] for e in await fc.listing("sub")] == ["renamed.txt"]
+            await fc.delete("sub/renamed.txt")
+            await fc.delete("sub")
+            await fc.delete("blob.bin")
+            await fc.delete("hello.txt")
+            await fc.delete(untitled["path"])
+
+            await fc.mkdir("work")
+            async with await JupyAsyncKernelClient.connect(base_url, path="work", timeout=TIMEOUT) as k1, \
+                       await JupyAsyncKernelClient.connect(base_url, path="work", timeout=TIMEOUT) as k2:
+                assert k1.kernel_id != k2.kernel_id
+                assert await k1.eval_expr("__import__('os').path.basename(__import__('os').getcwd())") == "work"
+                assert await k2.eval_expr("__import__('os').path.basename(__import__('os').getcwd())") == "work"
+
+            s = await sc.create("demo.ipynb")
+            try:
+                assert (await sc.create("demo.ipynb"))["id"] == s["id"]
+                assert (await sc.for_path("demo.ipynb"))["id"] == s["id"]
+                async with await sc.kernel(s, timeout=TIMEOUT) as kc:
+                    assert not kc.owned
+                    assert (await kc.reply("val = 42", timeout=TIMEOUT))["content"]["status"] == "ok"
+                await fc.rename("demo.ipynb", "moved.ipynb")
+                await sc.rename(s["id"], "moved.ipynb", name="moved.ipynb")
+                assert (await sc.for_path("moved.ipynb"))["id"] == s["id"]
+                async with await sc.kernel(s["id"], timeout=TIMEOUT) as kc:
+                    outs = await kc.exec_outs("val", timeout=TIMEOUT)
+                    assert outs[0]["data"]["text/plain"] == "42"
+                saved = await fc.read("moved.ipynb", type="notebook")
+                saved["cells"][0]["source"], saved["cells"][0]["outputs"] = "val", outs
+                await fc.write("moved.ipynb", saved)
+                kid = s["kernel"]["id"]
+                await sc.delete(s["id"])
+                s = None
+                assert await sc.for_path("moved.ipynb") is None
+                assert not await JupyAsyncKernelClient(base_url, kernel_id=kid).is_alive()
+                reloaded = await fc.read("moved.ipynb", type="notebook")
+                assert reloaded["cells"][0]["source"] == "val"
+                assert reloaded["cells"][0]["outputs"][0]["data"]["text/plain"] == "42"
+            finally:
+                if s is not None: await sc.delete(s["id"])
+                for p in ("moved.ipynb", "demo.ipynb", "work"):
+                    try: await fc.delete(p)
+                    except APIError: pass
+    finally: jg.stop()

@@ -1,6 +1,6 @@
 """Files and cells over the gateway's contents and cells APIs
 
-[Rustygate](https://github.com/AnswerDotAI/rustygate) provides a Jupyter-style `/api/contents` API for files and directories and `/api/cells` for editing cells inside notebooks.
+Jupyter servers, [jupygate](https://github.com/AnswerDotAI/jupygate), and [rustygate](https://github.com/AnswerDotAI/rustygate) expose the `/api/contents` API for files, notebooks, and directories. Rustygate also adds `/api/cells` for editing cells inside live notebooks.
 
 Use `JupyAsyncFilesClient` to address files by path. `JupyAsyncCellsClient` works with one notebook's cells. A kernel client bound to that notebook receives `cell_ops` change messages on its `cells` channel. `apply_ops` updates a local list of cells from those messages. Attach `JmsgQueues` if you want to read the broadcasts with `get_jmsg`.
 
@@ -16,17 +16,19 @@ import json
 from base64 import b64encode, b64decode
 from fastcore.basics import patch, patch_to
 from fastcore.meta import delegates
+from fastcore.xtras import obj2dict
 from fasttransport.errors import APIError
 from .core import KernelApi
 
 # %% ../nbs/02_files.ipynb #89287e61
 class JupyAsyncFilesClient(KernelApi):
-    "Files and directories over the gateway's contents API."
+    "Files, notebooks, and directories over the standard Jupyter `/api/contents` API."
+
 
 # %% ../nbs/02_files.ipynb #5f99f9ef
 @patch
 async def get(self:JupyAsyncFilesClient, path='', **kwargs):
-    "The model at `path`; `kwargs` become query parameters, e.g. `fields`."
+    "The model at `path`; `kwargs` become query parameters, e.g. `content=0`, `type='file'`, `format='base64'`."
     if not path: return await self.api.contents.get_root(query_=kwargs)
     return await self.api.contents.get_path(path=path, query_=kwargs)
 
@@ -56,20 +58,22 @@ async def delete(self:JupyAsyncFilesClient, path):
 # %% ../nbs/02_files.ipynb #a85d5ed9
 @patch
 async def write(self:JupyAsyncFilesClient, path, content, unique=False, overwrite=True):
-    "Write text or base64-encoded bytes and return the model. `unique` chooses a free `name_n.ext`; `overwrite=False` requires a new file."
-    c,f = (b64encode(content).decode(),'base64') if isinstance(content, bytes) else (content,'text')
-    return await self.put(path, overwrite=overwrite, unique=unique or None, content=c, format=f)
+    "Write text, bytes, or a notebook dict and return the model. Rustygate adds `unique` and `overwrite=False`."
+    if isinstance(content, dict): c,f,t = obj2dict(content),'json','notebook'
+    elif isinstance(content, bytes): c,f,t = b64encode(content).decode(),'base64','file'
+    else: c,f,t = content,'text','file'
+    return await self.put(path, overwrite=None if overwrite else False, unique=unique or None, type=t, content=c, format=f)
 
 @patch
-async def read(self:JupyAsyncFilesClient, path):
-    "A file's contents: `str` for text, `bytes` for binary."
-    m = await self.get(path, fields='content')
+async def read(self:JupyAsyncFilesClient, path, type='file'):
+    "A file's contents: `str` for text, `bytes` for binary, or a notebook dict when `type='notebook'`."
+    m = await self.get(path, type=type, content=1, fields='content')
     return b64decode(m['content']) if m['format']=='base64' else m['content']
 
 @patch
 async def listing(self:JupyAsyncFilesClient, path=''):
     "The entries of directory `path`."
-    return (await self.get(path))['content']
+    return (await self.get(path, content=1))['content']
 
 
 # %% ../nbs/02_files.ipynb #c55f2f20
@@ -85,8 +89,8 @@ async def rename(self:JupyAsyncFilesClient, path, to):
 
 @patch
 async def copy(self:JupyAsyncFilesClient, src, to='', unique=False, overwrite=True, extract=None, delete_source=None):
-    "Copy and return the new model. `unique` chooses a free `name_n.ext`; `overwrite=False` requires a new file."
-    return await self.post(to, overwrite=overwrite, unique=unique or None, extract=extract, delete_source=delete_source, copy_from=src)
+    "Copy and return the new model. Rustygate adds `unique` and `overwrite=False`."
+    return await self.post(to, overwrite=None if overwrite else False, unique=unique or None, extract=extract, delete_source=delete_source, copy_from=src)
 
 # %% ../nbs/02_files.ipynb #09ace5bf
 @patch
