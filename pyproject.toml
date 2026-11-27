@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 name = "jupyasyncclient"
 description = "Async kernel client for Jupyter Server via HTTP/WebSocket"
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 license = "Apache-2.0"
 authors = [{name = "Jeremy Howard"}]
 dynamic = ["version"]
