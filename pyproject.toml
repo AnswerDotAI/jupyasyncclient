@@ -30,6 +30,7 @@ jupyasyncclient = "jupyasyncclient._modidx:d"
 jac-ssh = "jupyasyncclient.ssh:main"
 
 [tool.nbdev]
+to_meta = ["export"]
 
 [project.optional-dependencies]
 dev = [
