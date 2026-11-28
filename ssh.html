@@ -1,0 +1,1062 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.11.9">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+<meta name="description" content="SSH-over-WebSocket ProxyCommand client, session store, and .ssh/config updater for Rustygate, Solveit, and Colab">
+
+<title>ssh – jupyasyncclient</title>
+<style>
+/* Default styles provided by pandoc.
+** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
+*/
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: 1.5em;}
+div.column{flex: auto;}
+@media screen {
+div.columns{gap: min(4vw, 1.5em);}
+div.column{overflow-x: auto;}
+}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+</style>
+
+
+<script src="site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="site_libs/quarto-nav/headroom.min.js"></script>
+<script src="site_libs/clipboard/clipboard.min.js"></script>
+<script src="site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="site_libs/quarto-search/fuse.min.js"></script>
+<script src="site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="./">
+<script src="site_libs/quarto-html/quarto.js" type="module"></script>
+<script src="site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
+<script src="site_libs/quarto-html/scrollable-regions/scrollable-regions.js" type="module"></script>
+<script src="site_libs/quarto-html/popper.min.js"></script>
+<script src="site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="site_libs/quarto-html/anchor.min.js"></script>
+<link href="site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="site_libs/quarto-html/quarto-syntax-highlighting-63b5708e65d6cd79cd7618c58d0c21e7.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="site_libs/bootstrap/bootstrap-f803fa4e565d46961d2a1845e6c2e3f5.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<script id="quarto-search-options" type="application/json">{
+  "location": "navbar",
+  "copy-button": false,
+  "collapse-after": 3,
+  "panel-placement": "end",
+  "type": "overlay",
+  "limit": 50,
+  "keyboard-shortcut": [
+    "f",
+    "/",
+    "s"
+  ],
+  "show-item-context": false,
+  "language": {
+    "search-no-results-text": "No results",
+    "search-matching-documents-text": "matching documents",
+    "search-copy-link-title": "Copy link to search",
+    "search-hide-matches-text": "Hide additional matches",
+    "search-more-match-text": "more match in this document",
+    "search-more-matches-text": "more matches in this document",
+    "search-clear-button-title": "Clear",
+    "search-text-placeholder": "",
+    "search-detached-cancel-button-title": "Cancel",
+    "search-submit-button-title": "Submit",
+    "search-label": "Search"
+  }
+}</script>
+
+
+<link rel="stylesheet" href="styles.css">
+<meta property="og:title" content="ssh – jupyasyncclient">
+<meta property="og:description" content="SSH-over-WebSocket ProxyCommand client, session store, and .ssh/config updater for Rustygate, Solveit, and Colab">
+<meta property="og:site_name" content="jupyasyncclient">
+<meta name="twitter:title" content="ssh – jupyasyncclient">
+<meta name="twitter:description" content="SSH-over-WebSocket ProxyCommand client, session store, and .ssh/config updater for Rustygate, Solveit, and Colab">
+<meta name="twitter:card" content="summary">
+</head>
+
+<body class="nav-sidebar floating nav-fixed quarto-light"><a id="quarto-skip-link" class="visually-hidden-focusable" href="#quarto-document-content">Skip to main content</a>
+
+<div id="quarto-search-results"></div>
+  <header id="quarto-header" class="headroom fixed-top">
+    <nav class="navbar navbar-expand-lg " data-bs-theme="dark" aria-label="Site">
+      <div class="navbar-container container-fluid">
+      <div class="navbar-brand-container mx-auto">
+    <a class="navbar-brand" href="./index.html">
+    <span class="navbar-title">jupyasyncclient</span>
+    </a>
+  </div>
+        <div class="quarto-navbar-tools tools-end">
+</div>
+          <div id="quarto-search" class="" title="Search"></div>
+      </div> <!-- /container-fluid -->
+    </nav>
+  <nav class="quarto-secondary-nav" aria-label="Toolbar">
+    <div class="container-fluid d-flex">
+      <button type="button" class="quarto-btn-toggle btn" data-bs-toggle="collapse" role="button" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
+        <i class="bi bi-layout-text-sidebar-reverse"></i>
+      </button>
+        <nav class="quarto-page-breadcrumbs" aria-label="Breadcrumbs"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="./ssh.html">ssh</a></li></ol></nav>
+        <a class="flex-grow-1" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">      
+        </a>
+    </div>
+  </nav>
+</header>
+<!-- content -->
+<div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article page-navbar">
+<!-- sidebar -->
+  <nav id="quarto-sidebar" class="sidebar collapse collapse-horizontal quarto-sidebar-collapse-item sidebar-navigation floating overflow-auto" aria-label="Section">
+    <div class="sidebar-menu-container"> 
+    <ul class="list-unstyled mt-1">
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./index.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">jupyasyncclient</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./core.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">core</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./term.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">term</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./files.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">files</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./ssh.html" class="sidebar-item-text sidebar-link active">
+ <span class="menu-text">ssh</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./sessions.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">sessions</span></a>
+  </div>
+</li>
+    </ul>
+    </div>
+</nav>
+<div id="quarto-sidebar-glass" class="quarto-sidebar-collapse-item" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item"></div>
+<!-- margin-sidebar -->
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+        <nav id="TOC" role="doc-toc" aria-labelledby="toc-title" class="toc-active">
+    <h2 id="toc-title">On this page</h2>
+   
+  <ul>
+  <li><a href="#websocket-urls-and-public-keys" id="toc-websocket-urls-and-public-keys" class="nav-link active" data-scroll-target="#websocket-urls-and-public-keys">WebSocket URLs and public keys</a></li>
+  <li><a href="#session-store-and-.sshconfig" id="toc-session-store-and-.sshconfig" class="nav-link" data-scroll-target="#session-store-and-.sshconfig">Session store and <code>.ssh/config</code></a></li>
+  <li><a href="#websocket-to-stdio-bridge" id="toc-websocket-to-stdio-bridge" class="nav-link" data-scroll-target="#websocket-to-stdio-bridge">WebSocket-to-stdio bridge</a></li>
+  <li><a href="#jac-ssh-cli" id="toc-jac-ssh-cli" class="nav-link" data-scroll-target="#jac-ssh-cli"><code>jac-ssh</code> CLI</a></li>
+  </ul>
+<div class="toc-actions"><ul><li><a href="https://github.com/AnswerDotAI/jupyasyncclient/issues/new" class="toc-action"><i class="bi bi-github"></i>Report an issue</a></li></ul></div><div class="quarto-alternate-formats"><h2>Other Formats</h2><ul><li><a href="ssh.html.md"><i class="bi bi-file-code"></i>Markdown</a></li></ul></div></nav>
+    </div>
+<!-- main -->
+<main class="content" id="quarto-document-content" tabindex="-1">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title">ssh</h1>
+</div>
+
+<div>
+  <div class="description">
+    SSH-over-WebSocket ProxyCommand client, session store, and <code>.ssh/config</code> updater for Rustygate, Solveit, and Colab
+  </div>
+</div>
+
+
+<div class="quarto-title-meta">
+
+    
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<!-- WARNING: THIS FILE WAS AUTOGENERATED! DO NOT EDIT! -->
+<p><code>jupyasyncclient.ssh</code> bridges OpenSSH’s <code>ProxyCommand</code> (<code>stdin</code>/<code>stdout</code>) to an SSH-over-WebSocket endpoint carrying raw OpenSSH bytes in binary frames. It works with Rustygate (<code>/api/ssh</code>), Solveit (<code>/rusty/api/ssh</code>), and Google Colab (<code>/colab/ssh</code>).</p>
+<p>The module stores per-host connection details in <code>$XDG_CONFIG_HOME/jupyasyncclient/ssh.json</code>, updates <code>~/.ssh/config</code> idempotently, and provides the <code>jac-ssh</code> CLI with <code>--colab</code>, <code>--solveit</code>, and <code>--proxy</code> modes.</p>
+<section id="websocket-urls-and-public-keys" class="level2">
+<h2 class="anchored" data-anchor-id="websocket-urls-and-public-keys">WebSocket URLs and public keys</h2>
+<p>Colab, Solveit, and bare Rustygate gateways share the same binary-frame SSH wire protocol and differ only in their endpoint URL and auth headers. <a href="https://AnswerDotAI.github.io/jupyasyncclient/ssh.html#colab_ws_url"><code>colab_ws_url</code></a>, <a href="https://AnswerDotAI.github.io/jupyasyncclient/ssh.html#solveit_ws_url"><code>solveit_ws_url</code></a>, and <a href="https://AnswerDotAI.github.io/jupyasyncclient/ssh.html#gateway_ws_url"><code>gateway_ws_url</code></a> normalize each target to a <code>ws://</code> or <code>wss://</code> endpoint.</p>
+<div id="304c123d" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-11-28T05:25:15.453784+00:00&quot;,&quot;shell.execute_reply&quot;:&quot;2026-11-28T05:25:15.695745+00:00&quot;,&quot;total&quot;:0.24196521799999005}}" data-execution_count="4">
+<hr>
+<p><a href="https://github.com/AnswerDotAI/jupyasyncclient/blob/main/jupyasyncclient/ssh.py#L56" target="_blank" style="float:right; font-size:smaller">source</a></p>
+<section id="colab_ws_url" class="level3">
+<h3 class="anchored" data-anchor-id="colab_ws_url">colab_ws_url</h3>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> colab_ws_url(</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>    url:<span class="bu">str</span>, <span class="co"># Colab runtime base URL (e.g. `https://&lt;host&gt;`)</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>    token:<span class="bu">str</span>, <span class="co"># Colab runtime proxy token</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>    mode:<span class="bu">str</span><span class="op">=</span><span class="st">'proxy'</span>, <span class="co"># Colab SSH client mode (`proxy`, `interactive`, or `cmd`)</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>)<span class="op">-&gt;</span><span class="bu">str</span>:</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p><em>Build the <code>wss://{host}/colab/ssh</code> URL for a Colab runtime.</em></p>
+</section>
+</div>
+<div id="12883f7c" class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>test_eq(colab_ws_url(<span class="st">'https://rt.colab.dev'</span>, <span class="st">'tok'</span>),</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>    <span class="st">'wss://rt.colab.dev/colab/ssh?colab-runtime-proxy-token=tok&amp;colab-client-agent=colab-cli&amp;colab-client-agent=ssh-mode-proxy'</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<div id="4f1b7c61" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-11-28T05:25:15.698217+00:00&quot;,&quot;shell.execute_reply&quot;:&quot;2026-11-28T05:25:15.701752+00:00&quot;,&quot;total&quot;:0.003538055999996459}}" data-execution_count="6">
+<hr>
+<p><a href="https://github.com/AnswerDotAI/jupyasyncclient/blob/main/jupyasyncclient/ssh.py#L76" target="_blank" style="float:right; font-size:smaller">source</a></p>
+<section id="gateway_ws_url" class="level3">
+<h3 class="anchored" data-anchor-id="gateway_ws_url">gateway_ws_url</h3>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> gateway_ws_url(</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>    url:<span class="bu">str</span>, <span class="co"># Gateway URL (HTTP(S) base or WebSocket endpoint)</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>    path:<span class="bu">str</span><span class="op">=</span><span class="st">'/api/ssh'</span>, <span class="co"># Endpoint path appended when `url` is a base URL</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>    token:<span class="bu">str</span><span class="op">=</span><span class="va">None</span>, <span class="co"># Optional gateway `?token=` query parameter</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>)<span class="op">-&gt;</span><span class="bu">str</span>:</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p><em>Normalize a Rustygate or generic gateway URL to an SSH WebSocket endpoint.</em></p>
+</section>
+</div>
+<div id="0862f747" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-11-28T05:25:15.701850+00:00&quot;,&quot;shell.execute_reply&quot;:&quot;2026-11-28T05:25:15.704749+00:00&quot;,&quot;total&quot;:0.002901637000007895}}" data-execution_count="7">
+<hr>
+<p><a href="https://github.com/AnswerDotAI/jupyasyncclient/blob/main/jupyasyncclient/ssh.py#L67" target="_blank" style="float:right; font-size:smaller">source</a></p>
+<section id="solveit_ws_url" class="level3">
+<h3 class="anchored" data-anchor-id="solveit_ws_url">solveit_ws_url</h3>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb4"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> solveit_ws_url(</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>    url:<span class="bu">str</span>, <span class="co"># Solveit instance URL (bare origin, `/rusty`, or full `/rusty/api/ssh`)</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>)<span class="op">-&gt;</span><span class="bu">str</span>:</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p><em>Normalize a Solveit instance URL to its <code>/rusty/api/ssh</code> WebSocket endpoint.</em></p>
+</section>
+</div>
+<div id="42ed38d7" class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb5"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>test_eq(solveit_ws_url(<span class="st">'https://demo.solve.it.com'</span>), <span class="st">'wss://demo.solve.it.com/rusty/api/ssh'</span>)</span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>test_eq(solveit_ws_url(<span class="st">'https://demo.solve.it.com/rusty/'</span>), <span class="st">'wss://demo.solve.it.com/rusty/api/ssh'</span>)</span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>test_eq(solveit_ws_url(<span class="st">'wss://demo.solve.it.com/rusty/api/ssh'</span>), <span class="st">'wss://demo.solve.it.com/rusty/api/ssh'</span>)</span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>test_eq(gateway_ws_url(<span class="st">'http://127.0.0.1:8787'</span>, token<span class="op">=</span><span class="st">'sec'</span>), <span class="st">'ws://127.0.0.1:8787/api/ssh?token=sec'</span>)</span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>test_eq(gateway_ws_url(<span class="st">'ws://127.0.0.1:8787/api/ssh'</span>), <span class="st">'ws://127.0.0.1:8787/api/ssh'</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<p><a href="https://AnswerDotAI.github.io/jupyasyncclient/ssh.html#resolve_pubkey"><code>resolve_pubkey</code></a> reads an explicit key’s <code>.pub</code> file (deriving it via <code>ssh-keygen -y -f</code> when only the private key exists) or auto-selects <code>~/.ssh/id_ed25519.pub</code> then <code>~/.ssh/id_ecdsa.pub</code>. RSA keys are skipped during auto-selection because Colab rejects them.</p>
+<div id="bf4d8f2f" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-11-28T05:25:15.708121+00:00&quot;,&quot;shell.execute_reply&quot;:&quot;2026-11-28T05:25:15.711648+00:00&quot;,&quot;total&quot;:0.0035306849999869883}}" data-execution_count="9">
+<hr>
+<p><a href="https://github.com/AnswerDotAI/jupyasyncclient/blob/main/jupyasyncclient/ssh.py#L106" target="_blank" style="float:right; font-size:smaller">source</a></p>
+<section id="resolve_pubkey" class="level3">
+<h3 class="anchored" data-anchor-id="resolve_pubkey">resolve_pubkey</h3>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb6"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> resolve_pubkey(</span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>    identity:<span class="bu">str</span> <span class="op">|</span> pathlib.Path<span class="op">=</span><span class="va">None</span>, <span class="co"># Explicit public or private key path, or `None` to scan `ssh_dir`</span></span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>    ssh_dir:<span class="bu">str</span> <span class="op">|</span> pathlib.Path<span class="op">=</span><span class="st">'~/.ssh'</span>, <span class="co"># Directory scanned when `identity` is omitted</span></span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>)<span class="op">-&gt;</span><span class="bu">str</span>:</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p><em>Return the OpenSSH public key text to send in the WebSocket upgrade header.</em></p>
+</section>
+</div>
+<div id="b1658457" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-11-28T05:25:15.711749+00:00&quot;,&quot;shell.execute_reply&quot;:&quot;2026-11-28T05:25:15.714646+00:00&quot;,&quot;total&quot;:0.0029012780000243765}}" data-execution_count="10">
+<hr>
+<p><a href="https://github.com/AnswerDotAI/jupyasyncclient/blob/main/jupyasyncclient/ssh.py#L89" target="_blank" style="float:right; font-size:smaller">source</a></p>
+<section id="default_identity" class="level3">
+<h3 class="anchored" data-anchor-id="default_identity">default_identity</h3>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb7"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> default_identity(</span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>    ssh_dir:<span class="bu">str</span> <span class="op">|</span> pathlib.Path<span class="op">=</span><span class="st">'~/.ssh'</span>, <span class="co"># Directory to scan for non-RSA key pairs</span></span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>)<span class="op">-&gt;</span><span class="bu">str</span> <span class="op">|</span> <span class="va">None</span>:</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p><em>Return the first <code>id_ed25519</code> or <code>id_ecdsa</code> path whose private and <code>.pub</code> files both exist.</em></p>
+</section>
+</div>
+<div id="74945b5c" class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb8"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="cf">with</span> tempfile.TemporaryDirectory(prefix<span class="op">=</span><span class="st">'jac-ssh-key-'</span>) <span class="im">as</span> td:</span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>    kp <span class="op">=</span> Path(td)<span class="op">/</span><span class="st">'id_ed25519'</span></span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>    subprocess.run([<span class="st">'ssh-keygen'</span>, <span class="st">'-q'</span>, <span class="st">'-t'</span>, <span class="st">'ed25519'</span>, <span class="st">'-N'</span>, <span class="st">''</span>, <span class="st">'-f'</span>, <span class="bu">str</span>(kp)], check<span class="op">=</span><span class="va">True</span>)</span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a>    pub <span class="op">=</span> kp.with_suffix(<span class="st">'.pub'</span>).read_text().strip()</span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a>    test_eq(default_identity(td), <span class="bu">str</span>(kp))</span>
+<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a>    test_eq(resolve_pubkey(ssh_dir<span class="op">=</span>td), pub)</span>
+<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a>    test_eq(resolve_pubkey(kp), pub)</span>
+<span id="cb8-8"><a href="#cb8-8" aria-hidden="true" tabindex="-1"></a>    kp.with_suffix(<span class="st">'.pub'</span>).unlink()</span>
+<span id="cb8-9"><a href="#cb8-9" aria-hidden="true" tabindex="-1"></a>    <span class="cf">assert</span> resolve_pubkey(kp).startswith(<span class="st">'ssh-ed25519 '</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+</section>
+<section id="session-store-and-.sshconfig" class="level2">
+<h2 class="anchored" data-anchor-id="session-store-and-.sshconfig">Session store and <code>.ssh/config</code></h2>
+<p><a href="https://AnswerDotAI.github.io/jupyasyncclient/ssh.html#save_ssh_session"><code>save_ssh_session</code></a>, <a href="https://AnswerDotAI.github.io/jupyasyncclient/ssh.html#get_ssh_session"><code>get_ssh_session</code></a>, and <a href="https://AnswerDotAI.github.io/jupyasyncclient/ssh.html#remove_ssh_session"><code>remove_ssh_session</code></a> manage per-host connection settings in <code>$XDG_CONFIG_HOME/jupyasyncclient/ssh.json</code> (mode <code>0600</code>) so <code>ProxyCommand</code> lines stay short and never embed secrets directly in <code>~/.ssh/config</code>.</p>
+<div id="7ba81d79" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-11-28T05:25:15.716289+00:00&quot;,&quot;shell.execute_reply&quot;:&quot;2026-11-28T05:25:15.718861+00:00&quot;,&quot;total&quot;:0.0025751670000033755}}" data-execution_count="12">
+<hr>
+<p><a href="https://github.com/AnswerDotAI/jupyasyncclient/blob/main/jupyasyncclient/ssh.py#L127" target="_blank" style="float:right; font-size:smaller">source</a></p>
+<section id="load_ssh_sessions" class="level3">
+<h3 class="anchored" data-anchor-id="load_ssh_sessions">load_ssh_sessions</h3>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb9"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> load_ssh_sessions(</span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>    store:<span class="bu">str</span> <span class="op">|</span> pathlib.Path<span class="op">=</span><span class="va">None</span></span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>)<span class="op">-&gt;</span><span class="bu">dict</span>:</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p><em>Load all saved SSH session entries from <code>store</code>.</em></p>
+</section>
+</div>
+<div id="3d5ca643" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-11-28T05:25:15.718969+00:00&quot;,&quot;shell.execute_reply&quot;:&quot;2026-11-28T05:25:15.721457+00:00&quot;,&quot;total&quot;:0.0024901410000097712}}" data-execution_count="13">
+<hr>
+<p><a href="https://github.com/AnswerDotAI/jupyasyncclient/blob/main/jupyasyncclient/ssh.py#L123" target="_blank" style="float:right; font-size:smaller">source</a></p>
+<section id="ssh_store_path" class="level3">
+<h3 class="anchored" data-anchor-id="ssh_store_path">ssh_store_path</h3>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb10"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> ssh_store_path(</span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>    store:<span class="bu">str</span> <span class="op">|</span> pathlib.Path<span class="op">=</span><span class="va">None</span></span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a>)<span class="op">-&gt;</span>pathlib.Path:</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p><em>Return the SSH session store JSON path.</em></p>
+</section>
+</div>
+<div id="ac900538" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-11-28T05:25:15.723895+00:00&quot;,&quot;shell.execute_reply&quot;:&quot;2026-11-28T05:25:15.726723+00:00&quot;,&quot;total&quot;:0.00283097299998758}}" data-execution_count="15">
+<hr>
+<p><a href="https://github.com/AnswerDotAI/jupyasyncclient/blob/main/jupyasyncclient/ssh.py#L152" target="_blank" style="float:right; font-size:smaller">source</a></p>
+<section id="remove_ssh_session" class="level3">
+<h3 class="anchored" data-anchor-id="remove_ssh_session">remove_ssh_session</h3>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb11"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> remove_ssh_session(</span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>    host:<span class="bu">str</span>, store:<span class="bu">str</span> <span class="op">|</span> pathlib.Path<span class="op">=</span><span class="va">None</span></span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a>)<span class="op">-&gt;</span><span class="bu">bool</span>:</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p><em>Remove <code>host</code> from the SSH session store; return <code>True</code> if it existed.</em></p>
+</section>
+</div>
+<div id="a510172b" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-11-28T05:25:15.726816+00:00&quot;,&quot;shell.execute_reply&quot;:&quot;2026-11-28T05:25:15.729461+00:00&quot;,&quot;total&quot;:0.0026483639999810293}}" data-execution_count="16">
+<hr>
+<p><a href="https://github.com/AnswerDotAI/jupyasyncclient/blob/main/jupyasyncclient/ssh.py#L147" target="_blank" style="float:right; font-size:smaller">source</a></p>
+<section id="get_ssh_session" class="level3">
+<h3 class="anchored" data-anchor-id="get_ssh_session">get_ssh_session</h3>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb12"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> get_ssh_session(</span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a>    host:<span class="bu">str</span>, store:<span class="bu">str</span> <span class="op">|</span> pathlib.Path<span class="op">=</span><span class="va">None</span></span>
+<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a>)<span class="op">-&gt;</span>fastcore.basics.AttrDict <span class="op">|</span> <span class="va">None</span>:</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p><em>Return the saved SSH session for <code>host</code>, or <code>None</code> if absent.</em></p>
+</section>
+</div>
+<div id="34be43a1" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-11-28T05:25:15.729554+00:00&quot;,&quot;shell.execute_reply&quot;:&quot;2026-11-28T05:25:15.732705+00:00&quot;,&quot;total&quot;:0.0031544310000128917}}" data-execution_count="17">
+<hr>
+<p><a href="https://github.com/AnswerDotAI/jupyasyncclient/blob/main/jupyasyncclient/ssh.py#L133" target="_blank" style="float:right; font-size:smaller">source</a></p>
+<section id="save_ssh_session" class="level3">
+<h3 class="anchored" data-anchor-id="save_ssh_session">save_ssh_session</h3>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb13"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> save_ssh_session(</span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a>    host:<span class="bu">str</span>, <span class="co"># SSH Host alias key</span></span>
+<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a>    entry:<span class="bu">dict</span>, <span class="co"># Connection fields (`url`, `headers`, `token_file`, `pubkey_header`, etc.)</span></span>
+<span id="cb13-4"><a href="#cb13-4" aria-hidden="true" tabindex="-1"></a>    store:<span class="bu">str</span> <span class="op">|</span> pathlib.Path<span class="op">=</span><span class="va">None</span>, <span class="co"># Optional session store path</span></span>
+<span id="cb13-5"><a href="#cb13-5" aria-hidden="true" tabindex="-1"></a>)<span class="op">-&gt;</span>fastcore.basics.AttrDict:</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p><em>Atomically save <code>entry</code> under <code>host</code> in the SSH session store (mode <code>0600</code>).</em></p>
+</section>
+</div>
+<p><a href="https://AnswerDotAI.github.io/jupyasyncclient/ssh.html#update_ssh_config"><code>update_ssh_config</code></a> appends a <code>Host &lt;host&gt;</code> stanza when absent, or replaces it when <code>replace=True</code>. <a href="https://AnswerDotAI.github.io/jupyasyncclient/ssh.html#setup_ssh"><code>setup_ssh</code></a> combines session persistence and config updates, returning <code>ssh &lt;host&gt;</code>.</p>
+<div id="3f8774c8" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-11-28T05:25:15.736912+00:00&quot;,&quot;shell.execute_reply&quot;:&quot;2026-11-28T05:25:15.740120+00:00&quot;,&quot;total&quot;:0.0032109199999865723}}" data-execution_count="20">
+<hr>
+<p><a href="https://github.com/AnswerDotAI/jupyasyncclient/blob/main/jupyasyncclient/ssh.py#L190" target="_blank" style="float:right; font-size:smaller">source</a></p>
+<section id="ssh_host_block" class="level3">
+<h3 class="anchored" data-anchor-id="ssh_host_block">ssh_host_block</h3>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb14"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> ssh_host_block(</span>
+<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a>    host:<span class="bu">str</span>, <span class="co"># SSH Host alias</span></span>
+<span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a>    <span class="op">*</span>, user:<span class="bu">str</span><span class="op">=</span><span class="va">None</span>, <span class="co"># Optional remote SSH username (`root` for Colab, `solveit` for Solveit)</span></span>
+<span id="cb14-4"><a href="#cb14-4" aria-hidden="true" tabindex="-1"></a>    identity:<span class="bu">str</span><span class="op">=</span><span class="va">None</span>, <span class="co"># Optional `ed25519`/`ecdsa` key path (auto-detected if omitted)</span></span>
+<span id="cb14-5"><a href="#cb14-5" aria-hidden="true" tabindex="-1"></a>    ssh_dir:pathlib.Path<span class="op">=</span><span class="va">None</span>, <span class="co"># Directory used for key auto-detection</span></span>
+<span id="cb14-6"><a href="#cb14-6" aria-hidden="true" tabindex="-1"></a>    proxy_cmd:<span class="bu">str</span><span class="op">=</span><span class="va">None</span>, <span class="co"># Explicit `ProxyCommand` override</span></span>
+<span id="cb14-7"><a href="#cb14-7" aria-hidden="true" tabindex="-1"></a>    store:<span class="bu">str</span> <span class="op">|</span> pathlib.Path<span class="op">=</span><span class="va">None</span>, <span class="co"># Non-default session store path to pass to `jac-ssh --proxy`</span></span>
+<span id="cb14-8"><a href="#cb14-8" aria-hidden="true" tabindex="-1"></a>)<span class="op">-&gt;</span><span class="bu">str</span>:</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p><em>Render an OpenSSH <code>Host</code> stanza pointing <code>ProxyCommand</code> at <code>jac-ssh --proxy</code>.</em></p>
+</section>
+</div>
+<div id="4992b25f" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-11-28T05:25:15.744179+00:00&quot;,&quot;shell.execute_reply&quot;:&quot;2026-11-28T05:25:15.748322+00:00&quot;,&quot;total&quot;:0.004145671999992828}}" data-execution_count="22">
+<hr>
+<p><a href="https://github.com/AnswerDotAI/jupyasyncclient/blob/main/jupyasyncclient/ssh.py#L239" target="_blank" style="float:right; font-size:smaller">source</a></p>
+<section id="setup_ssh" class="level3">
+<h3 class="anchored" data-anchor-id="setup_ssh">setup_ssh</h3>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb15"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> setup_ssh(</span>
+<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a>    host:<span class="bu">str</span>, <span class="co"># SSH Host alias in `ssh_config` and key in the session store</span></span>
+<span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a>    url:<span class="bu">str</span><span class="op">=</span><span class="va">None</span>, <span class="co"># Optional WebSocket or HTTP(S) target URL to save in the session store</span></span>
+<span id="cb15-4"><a href="#cb15-4" aria-hidden="true" tabindex="-1"></a>    <span class="op">*</span>, user:<span class="bu">str</span><span class="op">=</span><span class="va">None</span>, <span class="co"># Remote SSH username (`root` for Colab, `solveit` for Solveit)</span></span>
+<span id="cb15-5"><a href="#cb15-5" aria-hidden="true" tabindex="-1"></a>    identity:<span class="bu">str</span><span class="op">=</span><span class="va">None</span>, <span class="co"># Optional `ed25519`/`ecdsa` key path (auto-detected if omitted)</span></span>
+<span id="cb15-6"><a href="#cb15-6" aria-hidden="true" tabindex="-1"></a>    headers:<span class="bu">dict</span><span class="op">=</span><span class="va">None</span>, <span class="co"># Extra HTTP headers sent on the WebSocket upgrade</span></span>
+<span id="cb15-7"><a href="#cb15-7" aria-hidden="true" tabindex="-1"></a>    token:<span class="bu">str</span><span class="op">=</span><span class="va">None</span>, <span class="co"># Optional gateway `?token=` query parameter</span></span>
+<span id="cb15-8"><a href="#cb15-8" aria-hidden="true" tabindex="-1"></a>    bearer:<span class="bu">str</span><span class="op">=</span><span class="va">None</span>, <span class="co"># Optional `Authorization: Bearer &lt;bearer&gt;` token</span></span>
+<span id="cb15-9"><a href="#cb15-9" aria-hidden="true" tabindex="-1"></a>    token_file:<span class="bu">str</span> <span class="op">|</span> pathlib.Path<span class="op">=</span><span class="va">None</span>, <span class="co"># Optional file holding a Bearer token (read on each connect)</span></span>
+<span id="cb15-10"><a href="#cb15-10" aria-hidden="true" tabindex="-1"></a>    pubkey_header:<span class="bu">str</span><span class="op">=</span><span class="st">'X-Colab-Ssh-Pubkey'</span>, <span class="co"># Upgrade header carrying the SSH public key</span></span>
+<span id="cb15-11"><a href="#cb15-11" aria-hidden="true" tabindex="-1"></a>    ssh_config:<span class="bu">str</span> <span class="op">|</span> pathlib.Path<span class="op">=</span><span class="st">'~/.ssh/config'</span>, <span class="co"># OpenSSH config file to update</span></span>
+<span id="cb15-12"><a href="#cb15-12" aria-hidden="true" tabindex="-1"></a>    store:<span class="bu">str</span> <span class="op">|</span> pathlib.Path<span class="op">=</span><span class="va">None</span>, <span class="co"># Optional session store path</span></span>
+<span id="cb15-13"><a href="#cb15-13" aria-hidden="true" tabindex="-1"></a>    replace:<span class="bu">bool</span><span class="op">=</span><span class="va">False</span>, <span class="co"># Replace an existing `Host &lt;host&gt;` entry in `ssh_config`</span></span>
+<span id="cb15-14"><a href="#cb15-14" aria-hidden="true" tabindex="-1"></a>    meta:<span class="bu">dict</span><span class="op">=</span><span class="va">None</span>, <span class="co"># Extra metadata to store alongside the session (e.g. `endpoint`, `expire_time`)</span></span>
+<span id="cb15-15"><a href="#cb15-15" aria-hidden="true" tabindex="-1"></a>)<span class="op">-&gt;</span><span class="bu">str</span>:</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p><em>Save <code>host</code> connection details (when given) and ensure <code>Host &lt;host&gt;</code> exists in <code>ssh_config</code>.</em></p>
+</section>
+</div>
+<div id="0f6a99e5" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-11-28T05:25:15.748417+00:00&quot;,&quot;shell.execute_reply&quot;:&quot;2026-11-28T05:25:15.752348+00:00&quot;,&quot;total&quot;:0.003933418999992}}" data-execution_count="23">
+<hr>
+<p><a href="https://github.com/AnswerDotAI/jupyasyncclient/blob/main/jupyasyncclient/ssh.py#L214" target="_blank" style="float:right; font-size:smaller">source</a></p>
+<section id="update_ssh_config" class="level3">
+<h3 class="anchored" data-anchor-id="update_ssh_config">update_ssh_config</h3>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb16"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> update_ssh_config(</span>
+<span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a>    host:<span class="bu">str</span>, <span class="co"># SSH Host alias</span></span>
+<span id="cb16-3"><a href="#cb16-3" aria-hidden="true" tabindex="-1"></a>    <span class="op">*</span>, user:<span class="bu">str</span><span class="op">=</span><span class="va">None</span>, <span class="co"># Optional remote SSH username</span></span>
+<span id="cb16-4"><a href="#cb16-4" aria-hidden="true" tabindex="-1"></a>    identity:<span class="bu">str</span><span class="op">=</span><span class="va">None</span>, <span class="co"># Optional `ed25519`/`ecdsa` key path</span></span>
+<span id="cb16-5"><a href="#cb16-5" aria-hidden="true" tabindex="-1"></a>    ssh_config:<span class="bu">str</span> <span class="op">|</span> pathlib.Path<span class="op">=</span><span class="st">'~/.ssh/config'</span>, <span class="co"># OpenSSH config file to update</span></span>
+<span id="cb16-6"><a href="#cb16-6" aria-hidden="true" tabindex="-1"></a>    proxy_cmd:<span class="bu">str</span><span class="op">=</span><span class="va">None</span>, <span class="co"># Explicit `ProxyCommand` override</span></span>
+<span id="cb16-7"><a href="#cb16-7" aria-hidden="true" tabindex="-1"></a>    store:<span class="bu">str</span> <span class="op">|</span> pathlib.Path<span class="op">=</span><span class="va">None</span>, <span class="co"># Optional non-default session store path</span></span>
+<span id="cb16-8"><a href="#cb16-8" aria-hidden="true" tabindex="-1"></a>    replace:<span class="bu">bool</span><span class="op">=</span><span class="va">False</span>, <span class="co"># Replace an existing `Host &lt;host&gt;` block instead of keeping it</span></span>
+<span id="cb16-9"><a href="#cb16-9" aria-hidden="true" tabindex="-1"></a>)<span class="op">-&gt;</span>pathlib.Path:</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p><em>Ensure a <code>Host &lt;host&gt;</code> entry exists in <code>ssh_config</code> (idempotent unless <code>replace=True</code>).</em></p>
+</section>
+</div>
+<div id="b7531129" class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb17"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a><span class="cf">with</span> tempfile.TemporaryDirectory(prefix<span class="op">=</span><span class="st">'jac-ssh-cfg-'</span>) <span class="im">as</span> td:</span>
+<span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a>    cfg, st <span class="op">=</span> Path(td)<span class="op">/</span><span class="st">'config'</span>, Path(td)<span class="op">/</span><span class="st">'ssh.json'</span></span>
+<span id="cb17-3"><a href="#cb17-3" aria-hidden="true" tabindex="-1"></a>    test_eq(setup_ssh(<span class="st">'solveit'</span>, solveit_ws_url(<span class="st">'https://demo.solve.it.com'</span>), user<span class="op">=</span><span class="st">'solveit'</span>,</span>
+<span id="cb17-4"><a href="#cb17-4" aria-hidden="true" tabindex="-1"></a>        token_file<span class="op">=</span><span class="st">'~/.config/solveit/session'</span>, ssh_config<span class="op">=</span>cfg, store<span class="op">=</span>st), <span class="st">'ssh solveit'</span>)</span>
+<span id="cb17-5"><a href="#cb17-5" aria-hidden="true" tabindex="-1"></a>    first <span class="op">=</span> cfg.read_text()</span>
+<span id="cb17-6"><a href="#cb17-6" aria-hidden="true" tabindex="-1"></a>    <span class="cf">assert</span> <span class="st">'Host solveit'</span> <span class="kw">in</span> first <span class="kw">and</span> <span class="st">'User solveit'</span> <span class="kw">in</span> first <span class="kw">and</span> <span class="st">'--proxy --host solveit'</span> <span class="kw">in</span> first</span>
+<span id="cb17-7"><a href="#cb17-7" aria-hidden="true" tabindex="-1"></a>    setup_ssh(<span class="st">'solveit'</span>, user<span class="op">=</span><span class="st">'other'</span>, ssh_config<span class="op">=</span>cfg, store<span class="op">=</span>st)</span>
+<span id="cb17-8"><a href="#cb17-8" aria-hidden="true" tabindex="-1"></a>    test_eq(cfg.read_text(), first)</span>
+<span id="cb17-9"><a href="#cb17-9" aria-hidden="true" tabindex="-1"></a>    setup_ssh(<span class="st">'solveit'</span>, user<span class="op">=</span><span class="st">'other'</span>, ssh_config<span class="op">=</span>cfg, store<span class="op">=</span>st, replace<span class="op">=</span><span class="va">True</span>)</span>
+<span id="cb17-10"><a href="#cb17-10" aria-hidden="true" tabindex="-1"></a>    <span class="cf">assert</span> <span class="st">'User other'</span> <span class="kw">in</span> cfg.read_text() <span class="kw">and</span> <span class="st">'User solveit'</span> <span class="kw">not</span> <span class="kw">in</span> cfg.read_text()</span>
+<span id="cb17-11"><a href="#cb17-11" aria-hidden="true" tabindex="-1"></a>    test_eq(get_ssh_session(<span class="st">'solveit'</span>, store<span class="op">=</span>st).url, <span class="st">'wss://demo.solve.it.com/rusty/api/ssh'</span>)</span>
+<span id="cb17-12"><a href="#cb17-12" aria-hidden="true" tabindex="-1"></a>    test_eq(remove_ssh_session(<span class="st">'solveit'</span>, store<span class="op">=</span>st), <span class="va">True</span>)</span>
+<span id="cb17-13"><a href="#cb17-13" aria-hidden="true" tabindex="-1"></a>    test_eq((remove_ssh_session(<span class="st">'solveit'</span>, store<span class="op">=</span>st), get_ssh_session(<span class="st">'solveit'</span>, store<span class="op">=</span>st)), (<span class="va">False</span>, <span class="va">None</span>))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+</section>
+<section id="websocket-to-stdio-bridge" class="level2">
+<h2 class="anchored" data-anchor-id="websocket-to-stdio-bridge">WebSocket-to-stdio bridge</h2>
+<p><a href="https://AnswerDotAI.github.io/jupyasyncclient/ssh.html#bridge_ws"><code>bridge_ws</code></a> copies raw OpenSSH bytes between <code>stdin</code>/<code>stdout</code> and binary WebSocket frames until either side closes. <a href="https://AnswerDotAI.github.io/jupyasyncclient/ssh.html#proxy_ssh"><code>proxy_ssh</code></a> loads a saved session (or direct CLI options), attaches the resolved SSH public key and auth headers, opens the WebSocket with compression disabled, and hands the connection to <a href="https://AnswerDotAI.github.io/jupyasyncclient/ssh.html#bridge_ws"><code>bridge_ws</code></a>.</p>
+<div id="14f8ef71" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-11-28T05:25:15.755851+00:00&quot;,&quot;shell.execute_reply&quot;:&quot;2026-11-28T05:25:15.759443+00:00&quot;,&quot;total&quot;:0.003595240999999305}}" data-execution_count="25">
+<hr>
+<p><a href="https://github.com/AnswerDotAI/jupyasyncclient/blob/main/jupyasyncclient/ssh.py#L277" target="_blank" style="float:right; font-size:smaller">source</a></p>
+<section id="bridge_ws" class="level3">
+<h3 class="anchored" data-anchor-id="bridge_ws">bridge_ws</h3>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb18"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> bridge_ws(</span>
+<span id="cb18-2"><a href="#cb18-2" aria-hidden="true" tabindex="-1"></a>    ws, <span class="co"># Connected `websockets.sync.client.ClientConnection`</span></span>
+<span id="cb18-3"><a href="#cb18-3" aria-hidden="true" tabindex="-1"></a>    stdin_fd:<span class="bu">int</span><span class="op">=</span><span class="va">None</span>, <span class="co"># Input file descriptor (defaults to `sys.stdin.buffer.fileno()`)</span></span>
+<span id="cb18-4"><a href="#cb18-4" aria-hidden="true" tabindex="-1"></a>    stdout:NoneType<span class="op">=</span><span class="va">None</span>, <span class="co"># Binary output stream (defaults to `sys.stdout.buffer`)</span></span>
+<span id="cb18-5"><a href="#cb18-5" aria-hidden="true" tabindex="-1"></a>)<span class="op">-&gt;</span><span class="bu">int</span>:</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p><em>Bridge raw bytes bidirectionally between <code>stdin_fd</code>/<code>stdout</code> and binary frames on <code>ws</code>.</em></p>
+</section>
+</div>
+<div id="26046798" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-11-28T05:25:15.763462+00:00&quot;,&quot;shell.execute_reply&quot;:&quot;2026-11-28T05:25:15.768759+00:00&quot;,&quot;total&quot;:0.005299964000016644}}" data-execution_count="27">
+<hr>
+<p><a href="https://github.com/AnswerDotAI/jupyasyncclient/blob/main/jupyasyncclient/ssh.py#L310" target="_blank" style="float:right; font-size:smaller">source</a></p>
+<section id="proxy_ssh" class="level3">
+<h3 class="anchored" data-anchor-id="proxy_ssh">proxy_ssh</h3>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb19"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> proxy_ssh(</span>
+<span id="cb19-2"><a href="#cb19-2" aria-hidden="true" tabindex="-1"></a>    host:<span class="bu">str</span><span class="op">=</span><span class="va">None</span>, <span class="co"># Saved session alias to load from `store`</span></span>
+<span id="cb19-3"><a href="#cb19-3" aria-hidden="true" tabindex="-1"></a>    <span class="op">*</span>, url:<span class="bu">str</span><span class="op">=</span><span class="va">None</span>, <span class="co"># Direct WebSocket or HTTP(S) URL (overrides stored session URL)</span></span>
+<span id="cb19-4"><a href="#cb19-4" aria-hidden="true" tabindex="-1"></a>    identity:<span class="bu">str</span><span class="op">=</span><span class="va">None</span>, <span class="co"># Path to public or private SSH key</span></span>
+<span id="cb19-5"><a href="#cb19-5" aria-hidden="true" tabindex="-1"></a>    token:<span class="bu">str</span><span class="op">=</span><span class="va">None</span>, <span class="co"># Optional `?token=` query parameter</span></span>
+<span id="cb19-6"><a href="#cb19-6" aria-hidden="true" tabindex="-1"></a>    bearer:<span class="bu">str</span><span class="op">=</span><span class="va">None</span>, <span class="co"># Optional `Authorization: Bearer` token</span></span>
+<span id="cb19-7"><a href="#cb19-7" aria-hidden="true" tabindex="-1"></a>    token_file:<span class="bu">str</span> <span class="op">|</span> pathlib.Path<span class="op">=</span><span class="va">None</span>, <span class="co"># Optional file holding a Bearer token</span></span>
+<span id="cb19-8"><a href="#cb19-8" aria-hidden="true" tabindex="-1"></a>    headers:<span class="bu">dict</span><span class="op">=</span><span class="va">None</span>, <span class="co"># Extra HTTP upgrade headers</span></span>
+<span id="cb19-9"><a href="#cb19-9" aria-hidden="true" tabindex="-1"></a>    pubkey_header:<span class="bu">str</span><span class="op">=</span><span class="va">None</span>, <span class="co"># Upgrade header name for the SSH public key</span></span>
+<span id="cb19-10"><a href="#cb19-10" aria-hidden="true" tabindex="-1"></a>    store:<span class="bu">str</span> <span class="op">|</span> pathlib.Path<span class="op">=</span><span class="va">None</span>, <span class="co"># Optional session store path</span></span>
+<span id="cb19-11"><a href="#cb19-11" aria-hidden="true" tabindex="-1"></a>    stdin_fd:<span class="bu">int</span><span class="op">=</span><span class="va">None</span>, <span class="co"># Override input fd (for testing)</span></span>
+<span id="cb19-12"><a href="#cb19-12" aria-hidden="true" tabindex="-1"></a>    stdout:NoneType<span class="op">=</span><span class="va">None</span>, <span class="co"># Override output stream (for testing)</span></span>
+<span id="cb19-13"><a href="#cb19-13" aria-hidden="true" tabindex="-1"></a>)<span class="op">-&gt;</span><span class="bu">int</span>:</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p><em>Connect to an SSH-over-WebSocket endpoint and bridge stdio for OpenSSH <code>ProxyCommand</code>.</em></p>
+</section>
+</div>
+<p>Start a local WebSocket echo server that records upgrade headers and rejects <code>/deny</code> with HTTP 401.</p>
+<div id="5acb389e" class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb20"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a>seen <span class="op">=</span> {}</span>
+<span id="cb20-2"><a href="#cb20-2" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> _echo_handler(ws):</span>
+<span id="cb20-3"><a href="#cb20-3" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> msg <span class="kw">in</span> ws: ws.send(msg)</span>
+<span id="cb20-4"><a href="#cb20-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb20-5"><a href="#cb20-5" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> _check_req(conn, req):</span>
+<span id="cb20-6"><a href="#cb20-6" aria-hidden="true" tabindex="-1"></a>    seen[<span class="st">'headers'</span>] <span class="op">=</span> <span class="bu">dict</span>(req.headers)</span>
+<span id="cb20-7"><a href="#cb20-7" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> req.path.startswith(<span class="st">'/deny'</span>): <span class="cf">return</span> WsResponse(<span class="dv">401</span>, <span class="st">'Unauthorized'</span>, WsHeaders(), <span class="st">b'bad token'</span>)</span>
+<span id="cb20-8"><a href="#cb20-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb20-9"><a href="#cb20-9" aria-hidden="true" tabindex="-1"></a>srv <span class="op">=</span> ws_serve(_echo_handler, <span class="st">'127.0.0.1'</span>, <span class="dv">0</span>, process_request<span class="op">=</span>_check_req)</span>
+<span id="cb20-10"><a href="#cb20-10" aria-hidden="true" tabindex="-1"></a>ws_port <span class="op">=</span> srv.socket.getsockname()[<span class="dv">1</span>]</span>
+<span id="cb20-11"><a href="#cb20-11" aria-hidden="true" tabindex="-1"></a>threading.Thread(target<span class="op">=</span>srv.serve_forever, daemon<span class="op">=</span><span class="va">True</span>).start()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<p>Run <a href="https://AnswerDotAI.github.io/jupyasyncclient/ssh.html#proxy_ssh"><code>proxy_ssh</code></a> over a pair of pipes and verify the binary round-trip, upgrade headers, and denial exit code.</p>
+<div id="d1f071b9" class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb21"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a>td_ws <span class="op">=</span> tempfile.TemporaryDirectory(prefix<span class="op">=</span><span class="st">'jac-ssh-ws-'</span>)</span>
+<span id="cb21-2"><a href="#cb21-2" aria-hidden="true" tabindex="-1"></a>kp, tf <span class="op">=</span> Path(td_ws.name)<span class="op">/</span><span class="st">'id_ed25519'</span>, Path(td_ws.name)<span class="op">/</span><span class="st">'session'</span></span>
+<span id="cb21-3"><a href="#cb21-3" aria-hidden="true" tabindex="-1"></a>subprocess.run([<span class="st">'ssh-keygen'</span>, <span class="st">'-q'</span>, <span class="st">'-t'</span>, <span class="st">'ed25519'</span>, <span class="st">'-N'</span>, <span class="st">''</span>, <span class="st">'-f'</span>, <span class="bu">str</span>(kp)], check<span class="op">=</span><span class="va">True</span>)</span>
+<span id="cb21-4"><a href="#cb21-4" aria-hidden="true" tabindex="-1"></a>tf.write_text(<span class="st">'secret-cookie-value</span><span class="ch">\n</span><span class="st">'</span>)</span>
+<span id="cb21-5"><a href="#cb21-5" aria-hidden="true" tabindex="-1"></a>r_in, w_in <span class="op">=</span> os.pipe()</span>
+<span id="cb21-6"><a href="#cb21-6" aria-hidden="true" tabindex="-1"></a>r_out, w_out <span class="op">=</span> os.pipe()</span>
+<span id="cb21-7"><a href="#cb21-7" aria-hidden="true" tabindex="-1"></a>out_buf, got <span class="op">=</span> os.fdopen(w_out, <span class="st">'wb'</span>), []</span>
+<span id="cb21-8"><a href="#cb21-8" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> _drive():</span>
+<span id="cb21-9"><a href="#cb21-9" aria-hidden="true" tabindex="-1"></a>    os.write(w_in, <span class="st">b'SSH-2.0-test</span><span class="ch">\r\n</span><span class="st">'</span>)</span>
+<span id="cb21-10"><a href="#cb21-10" aria-hidden="true" tabindex="-1"></a>    got.append(os.read(r_out, <span class="dv">1024</span>))</span>
+<span id="cb21-11"><a href="#cb21-11" aria-hidden="true" tabindex="-1"></a>    os.close(w_in)</span>
+<span id="cb21-12"><a href="#cb21-12" aria-hidden="true" tabindex="-1"></a>t <span class="op">=</span> threading.Thread(target<span class="op">=</span>_drive, daemon<span class="op">=</span><span class="va">True</span>)</span>
+<span id="cb21-13"><a href="#cb21-13" aria-hidden="true" tabindex="-1"></a>t.start()</span>
+<span id="cb21-14"><a href="#cb21-14" aria-hidden="true" tabindex="-1"></a>rc <span class="op">=</span> proxy_ssh(url<span class="op">=</span><span class="ss">f'ws://127.0.0.1:</span><span class="sc">{</span>ws_port<span class="sc">}</span><span class="ss">/api/ssh'</span>, identity<span class="op">=</span>kp, token_file<span class="op">=</span>tf, stdin_fd<span class="op">=</span>r_in, stdout<span class="op">=</span>out_buf)</span>
+<span id="cb21-15"><a href="#cb21-15" aria-hidden="true" tabindex="-1"></a>t.join(<span class="dv">5</span>)</span>
+<span id="cb21-16"><a href="#cb21-16" aria-hidden="true" tabindex="-1"></a>out_buf.close()</span>
+<span id="cb21-17"><a href="#cb21-17" aria-hidden="true" tabindex="-1"></a>os.close(r_in)</span>
+<span id="cb21-18"><a href="#cb21-18" aria-hidden="true" tabindex="-1"></a>os.close(r_out)</span>
+<span id="cb21-19"><a href="#cb21-19" aria-hidden="true" tabindex="-1"></a>test_eq((rc, got[<span class="dv">0</span>]), (<span class="dv">0</span>, <span class="st">b'SSH-2.0-test</span><span class="ch">\r\n</span><span class="st">'</span>))</span>
+<span id="cb21-20"><a href="#cb21-20" aria-hidden="true" tabindex="-1"></a>test_eq(seen[<span class="st">'headers'</span>].get(<span class="st">'x-colab-ssh-pubkey'</span>), kp.with_suffix(<span class="st">'.pub'</span>).read_text().strip())</span>
+<span id="cb21-21"><a href="#cb21-21" aria-hidden="true" tabindex="-1"></a>test_eq(seen[<span class="st">'headers'</span>].get(<span class="st">'authorization'</span>), <span class="st">'Bearer secret-cookie-value'</span>)</span>
+<span id="cb21-22"><a href="#cb21-22" aria-hidden="true" tabindex="-1"></a>test_eq(proxy_ssh(url<span class="op">=</span><span class="ss">f'ws://127.0.0.1:</span><span class="sc">{</span>ws_port<span class="sc">}</span><span class="ss">/deny/ssh'</span>, identity<span class="op">=</span>kp, token_file<span class="op">=</span>tf), <span class="dv">1</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+</section>
+<section id="jac-ssh-cli" class="level2">
+<h2 class="anchored" data-anchor-id="jac-ssh-cli"><code>jac-ssh</code> CLI</h2>
+<p><code>jac-ssh</code> updates <code>~/.ssh/config</code> for <code>--colab</code> (<code>User root</code>, <code>/colab/ssh</code>), <code>--solveit</code> (<code>User solveit</code>, <code>/rusty/api/ssh</code>, <code>~/.config/solveit/session</code>), or a bare Rustygate URL, and runs as OpenSSH’s <code>ProxyCommand</code> when called with <code>--proxy</code>.</p>
+<div id="adc2d915" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-11-28T05:25:15.773512+00:00&quot;,&quot;shell.execute_reply&quot;:&quot;2026-11-28T05:25:15.778787+00:00&quot;,&quot;total&quot;:0.005278402000016058}}" data-execution_count="29">
+<hr>
+<p><a href="https://github.com/AnswerDotAI/jupyasyncclient/blob/main/jupyasyncclient/ssh.py#L358" target="_blank" style="float:right; font-size:smaller">source</a></p>
+<section id="main" class="level3">
+<h3 class="anchored" data-anchor-id="main">main</h3>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb22"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb22-1"><a href="#cb22-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> main(</span>
+<span id="cb22-2"><a href="#cb22-2" aria-hidden="true" tabindex="-1"></a>    host:<span class="bu">str</span><span class="op">=</span><span class="va">None</span>, <span class="co"># SSH Host alias (defaults to 'colab' with --colab, 'solveit' with --solveit, else 'rustygate')</span></span>
+<span id="cb22-3"><a href="#cb22-3" aria-hidden="true" tabindex="-1"></a>    url:<span class="bu">str</span><span class="op">=</span><span class="va">None</span>, <span class="co"># Target URL (Colab runtime URL, Solveit instance URL, or Rustygate URL)</span></span>
+<span id="cb22-4"><a href="#cb22-4" aria-hidden="true" tabindex="-1"></a>    colab:<span class="bu">bool</span><span class="op">=</span><span class="va">False</span>, <span class="co"># Configure for a Google Colab runtime</span></span>
+<span id="cb22-5"><a href="#cb22-5" aria-hidden="true" tabindex="-1"></a>    solveit:<span class="bu">bool</span><span class="op">=</span><span class="va">False</span>, <span class="co"># Configure for a Solveit instance (uses ~/.config/solveit/session and /rusty/api/ssh)</span></span>
+<span id="cb22-6"><a href="#cb22-6" aria-hidden="true" tabindex="-1"></a>    proxy:<span class="bu">bool</span><span class="op">=</span><span class="va">False</span>, <span class="co"># Run as an OpenSSH ProxyCommand bridging stdin/stdout to the WebSocket</span></span>
+<span id="cb22-7"><a href="#cb22-7" aria-hidden="true" tabindex="-1"></a>    user:<span class="bu">str</span><span class="op">=</span><span class="va">None</span>, <span class="co"># Remote SSH username (defaults to 'root' for --colab, 'solveit' for --solveit)</span></span>
+<span id="cb22-8"><a href="#cb22-8" aria-hidden="true" tabindex="-1"></a>    identity:<span class="bu">str</span><span class="op">=</span><span class="va">None</span>, <span class="co"># Path to ed25519/ecdsa key (auto-detected from ~/.ssh if omitted)</span></span>
+<span id="cb22-9"><a href="#cb22-9" aria-hidden="true" tabindex="-1"></a>    token:<span class="bu">str</span><span class="op">=</span><span class="va">None</span>, <span class="co"># Query token (Colab runtime proxy token or Rustygate gateway token)</span></span>
+<span id="cb22-10"><a href="#cb22-10" aria-hidden="true" tabindex="-1"></a>    bearer:<span class="bu">str</span><span class="op">=</span><span class="va">None</span>, <span class="co"># Explicit Authorization Bearer token</span></span>
+<span id="cb22-11"><a href="#cb22-11" aria-hidden="true" tabindex="-1"></a>    token_file:<span class="bu">str</span><span class="op">=</span><span class="va">None</span>, <span class="co"># File containing a Bearer token (defaults to ~/.config/solveit/session with --solveit)</span></span>
+<span id="cb22-12"><a href="#cb22-12" aria-hidden="true" tabindex="-1"></a>    ssh_config:<span class="bu">str</span><span class="op">=</span><span class="st">'~/.ssh/config'</span>, <span class="co"># OpenSSH config file to update</span></span>
+<span id="cb22-13"><a href="#cb22-13" aria-hidden="true" tabindex="-1"></a>    store:<span class="bu">str</span><span class="op">=</span><span class="va">None</span>, <span class="co"># Session store JSON path (defaults to $XDG_CONFIG_HOME/jupyasyncclient/ssh.json)</span></span>
+<span id="cb22-14"><a href="#cb22-14" aria-hidden="true" tabindex="-1"></a>    replace:<span class="bu">bool</span><span class="op">=</span><span class="va">False</span>, <span class="co"># Replace an existing Host block in ssh_config</span></span>
+<span id="cb22-15"><a href="#cb22-15" aria-hidden="true" tabindex="-1"></a>):</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p><em>Configure <code>~/.ssh/config</code> or bridge OpenSSH <code>ProxyCommand</code> over WebSockets for Colab, Solveit, and Rustygate.</em></p>
+</section>
+</div>
+<p>Verify the CLI flags for <code>--colab</code> and <code>--solveit</code> against temporary config and session files.</p>
+<div id="c587168b" class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb23"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a><span class="cf">with</span> tempfile.TemporaryDirectory(prefix<span class="op">=</span><span class="st">'jac-ssh-cli-'</span>) <span class="im">as</span> td:</span>
+<span id="cb23-2"><a href="#cb23-2" aria-hidden="true" tabindex="-1"></a>    cfg, st <span class="op">=</span> Path(td)<span class="op">/</span><span class="st">'config'</span>, Path(td)<span class="op">/</span><span class="st">'ssh.json'</span></span>
+<span id="cb23-3"><a href="#cb23-3" aria-hidden="true" tabindex="-1"></a>    base <span class="op">=</span> [sys.executable, <span class="st">'-m'</span>, <span class="st">'jupyasyncclient.ssh'</span>, <span class="st">'--ssh-config'</span>, <span class="bu">str</span>(cfg), <span class="st">'--store'</span>, <span class="bu">str</span>(st)]</span>
+<span id="cb23-4"><a href="#cb23-4" aria-hidden="true" tabindex="-1"></a>    r1 <span class="op">=</span> subprocess.run(base <span class="op">+</span> [<span class="st">'--colab'</span>], check<span class="op">=</span><span class="va">True</span>, capture_output<span class="op">=</span><span class="va">True</span>, text<span class="op">=</span><span class="va">True</span>)</span>
+<span id="cb23-5"><a href="#cb23-5" aria-hidden="true" tabindex="-1"></a>    r2 <span class="op">=</span> subprocess.run(base <span class="op">+</span> [<span class="st">'--solveit'</span>, <span class="st">'--host'</span>, <span class="st">'myinst'</span>, <span class="st">'--url'</span>, <span class="st">'https://myinst.solve.it.com'</span>], check<span class="op">=</span><span class="va">True</span>, capture_output<span class="op">=</span><span class="va">True</span>, text<span class="op">=</span><span class="va">True</span>)</span>
+<span id="cb23-6"><a href="#cb23-6" aria-hidden="true" tabindex="-1"></a>    test_eq((r1.stdout.strip(), r2.stdout.strip()), (<span class="st">'ssh colab'</span>, <span class="st">'ssh myinst'</span>))</span>
+<span id="cb23-7"><a href="#cb23-7" aria-hidden="true" tabindex="-1"></a>    cfg_txt <span class="op">=</span> cfg.read_text()</span>
+<span id="cb23-8"><a href="#cb23-8" aria-hidden="true" tabindex="-1"></a>    <span class="cf">assert</span> <span class="st">'Host colab'</span> <span class="kw">in</span> cfg_txt <span class="kw">and</span> <span class="st">'User root'</span> <span class="kw">in</span> cfg_txt</span>
+<span id="cb23-9"><a href="#cb23-9" aria-hidden="true" tabindex="-1"></a>    <span class="cf">assert</span> <span class="st">'Host myinst'</span> <span class="kw">in</span> cfg_txt <span class="kw">and</span> <span class="st">'User solveit'</span> <span class="kw">in</span> cfg_txt</span>
+<span id="cb23-10"><a href="#cb23-10" aria-hidden="true" tabindex="-1"></a>    test_eq(get_ssh_session(<span class="st">'myinst'</span>, store<span class="op">=</span>st).url, <span class="st">'wss://myinst.solve.it.com/rusty/api/ssh'</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+
+
+</section>
+
+</main> <!-- /main -->
+<script id="quarto-html-after-body" type="application/javascript">
+  window.document.addEventListener("DOMContentLoaded", function (event) {
+    const icon = "";
+    const anchorJS = new window.AnchorJS();
+    anchorJS.options = {
+      placement: 'right',
+      icon: icon
+    };
+    anchorJS.add('.anchored');
+    const isCodeAnnotation = (el) => {
+      for (const clz of el.classList) {
+        if (clz.startsWith('code-annotation-')) {                     
+          return true;
+        }
+      }
+      return false;
+    }
+    const onCopySuccess = function(e) {
+      // button target
+      const button = e.trigger;
+      // don't keep focus
+      button.blur();
+      // flash "checked"
+      button.classList.add('code-copy-button-checked');
+      var currentTitle = button.getAttribute("title");
+      button.setAttribute("title", "Copied!");
+      let tooltip;
+      if (window.bootstrap) {
+        button.setAttribute("data-bs-toggle", "tooltip");
+        button.setAttribute("data-bs-placement", "left");
+        button.setAttribute("data-bs-title", "Copied!");
+        tooltip = new bootstrap.Tooltip(button, 
+          { trigger: "manual", 
+            customClass: "code-copy-button-tooltip",
+            offset: [0, -8]});
+        tooltip.show();    
+      }
+      setTimeout(function() {
+        if (tooltip) {
+          tooltip.hide();
+          button.removeAttribute("data-bs-title");
+          button.removeAttribute("data-bs-toggle");
+          button.removeAttribute("data-bs-placement");
+        }
+        button.setAttribute("title", currentTitle);
+        button.classList.remove('code-copy-button-checked');
+      }, 1000);
+      // clear code selection
+      e.clearSelection();
+    }
+    const getTextToCopy = function(trigger) {
+      const outerScaffold = trigger.parentElement.cloneNode(true);
+      const codeEl = outerScaffold.querySelector('code');
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+    const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+      text: getTextToCopy
+    });
+    clipboard.on('success', onCopySuccess);
+    if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+      const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+        text: getTextToCopy,
+        container: window.document.getElementById('quarto-embedded-source-code-modal')
+      });
+      clipboardModal.on('success', onCopySuccess);
+    }
+      var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+      var mailtoRegex = new RegExp(/^mailto:/);
+        var filterRegex = new RegExp("https:\/\/AnswerDotAI\.github\.io\/jupyasyncclient");
+      var isInternal = (href) => {
+          return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+      }
+      // Inspect non-navigation links and adorn them if external
+      window.quartoDecorateExternalLinks = function (root) {
+     var links = (root || window.document).querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+      for (var i=0; i<links.length; i++) {
+        const link = links[i];
+        if (!isInternal(link.href)) {
+          // undo the damage that might have been done by quarto-nav.js in the case of
+          // links that we want to consider external
+          if (link.dataset.originalHref !== undefined) {
+            link.href = link.dataset.originalHref;
+          }
+          if (!link.classList.contains('no-external-icon')) {
+          }
+        }
+      }
+      };
+      window.quartoDecorateExternalLinks(window.document);
+    // Esc closes the popup (WCAG 1.4.13) and focus leaving both trigger and
+    // popup closes it (WCAG 2.4.11); tippy handles neither for interactive popups.
+    const hideOnEscAndFocusOut = {
+      name: 'hideOnEscAndFocusOut',
+      defaultValue: true,
+      fn(instance) {
+        const dismiss = () => {
+          // A show scheduled by the trigger delay would otherwise reopen it
+          instance.clearDelayTimeouts();
+          instance.hide();
+        };
+        const onKeyDown = (event) => {
+          if (event.key !== 'Escape') {
+            return;
+          }
+          // Keep Esc from also reaching page handlers (e.g. reveal.js overview),
+          // except an open reveal.js slide menu, which Esc should close too.
+          // The menu handles keys only when its keyboard option is on.
+          const menuHandlesEsc = window.Reveal?.getPlugin?.('menu')?.isOpen() &&
+            window.Reveal.getConfig().menu?.keyboard !== false;
+          if (!menuHandlesEsc) {
+            event.stopPropagation();
+          }
+          if (instance.popper.contains(window.document.activeElement)) {
+            // Disabled while refocusing so the focus trigger does not reopen it
+            instance.disable();
+            instance.reference.focus();
+            instance.enable();
+          }
+          dismiss();
+        };
+        const onFocusOut = (event) => {
+          const target = event.relatedTarget;
+          if (target && !instance.reference.contains(target) &&
+              !instance.popper.contains(target)) {
+            dismiss();
+          }
+        };
+        // On the trigger too: a click trigger (code-annotations: select) has no
+        // blur handling. Attached for the instance's lifetime so leaving the
+        // trigger also cancels a show still pending on the trigger delay.
+        instance.reference.addEventListener('focusout', onFocusOut);
+        return {
+          onShow() {
+            window.document.addEventListener('keydown', onKeyDown, true);
+            instance.popper.addEventListener('focusout', onFocusOut);
+          },
+          onHide() {
+            window.document.removeEventListener('keydown', onKeyDown, true);
+            instance.popper.removeEventListener('focusout', onFocusOut);
+          },
+          onDestroy() {
+            instance.reference.removeEventListener('focusout', onFocusOut);
+          },
+        };
+      },
+    };
+    function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+      const config = {
+        allowHTML: true,
+        maxWidth: 500,
+        delay: 100,
+        arrow: false,
+        appendTo: function(el) {
+            return el.parentElement;
+        },
+        interactive: true,
+        interactiveBorder: 10,
+        theme: 'quarto',
+        placement: 'bottom-start',
+        plugins: [hideOnEscAndFocusOut],
+      };
+      if (contentFn) {
+        config.content = contentFn;
+      }
+      if (onTriggerFn) {
+        config.onTrigger = onTriggerFn;
+      }
+      if (onUntriggerFn) {
+        config.onUntrigger = onUntriggerFn;
+      }
+      window.tippy(el, config); 
+    }
+    const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+    for (var i=0; i<noterefs.length; i++) {
+      const ref = noterefs[i];
+      tippyHover(ref, function() {
+        // use id or data attribute instead here
+        let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+        try { href = new URL(href).hash; } catch {}
+        const id = href.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note) {
+          return note.innerHTML;
+        } else {
+          return "";
+        }
+      });
+    }
+    const xrefs = window.document.querySelectorAll('a.quarto-xref');
+    const processXRef = (id, note) => {
+      // Strip column container classes
+      const stripColumnClz = (el) => {
+        el.classList.remove("page-full", "page-columns");
+        if (el.children) {
+          for (const child of el.children) {
+            stripColumnClz(child);
+          }
+        }
+      }
+      stripColumnClz(note)
+      if (id === null || id.startsWith('sec-')) {
+        // Special case sections, only their first couple elements
+        const container = document.createElement("div");
+        if (note.children && note.children.length > 2) {
+          container.appendChild(note.children[0].cloneNode(true));
+          for (let i = 1; i < note.children.length; i++) {
+            const child = note.children[i];
+            if (child.tagName === "P" && child.innerText === "") {
+              continue;
+            } else {
+              container.appendChild(child.cloneNode(true));
+              break;
+            }
+          }
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(container);
+          }
+          return container.innerHTML
+        } else {
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(note);
+          }
+          return note.innerHTML;
+        }
+      } else {
+        // Remove any anchor links if they are present
+        const anchorLink = note.querySelector('a.anchorjs-link');
+        if (anchorLink) {
+          anchorLink.remove();
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        if (note.classList.contains("callout")) {
+          return note.outerHTML;
+        } else {
+          return note.innerHTML;
+        }
+      }
+    }
+    for (var i=0; i<xrefs.length; i++) {
+      const xref = xrefs[i];
+      tippyHover(xref, undefined, function(instance) {
+        instance.disable();
+        let url = xref.getAttribute('href');
+        let hash = undefined; 
+        if (url.startsWith('#')) {
+          hash = url;
+        } else {
+          try { hash = new URL(url).hash; } catch {}
+        }
+        if (hash) {
+          const id = hash.replace(/^#\/?/, "");
+          const note = window.document.getElementById(id);
+          if (note !== null) {
+            try {
+              const html = processXRef(id, note.cloneNode(true));
+              instance.setContent(html);
+            } finally {
+              instance.enable();
+              instance.show();
+            }
+          } else {
+            // See if we can fetch this
+            fetch(url.split('#')[0])
+            .then(res => res.text())
+            .then(html => {
+              const parser = new DOMParser();
+              const htmlDoc = parser.parseFromString(html, "text/html");
+              const note = htmlDoc.getElementById(id);
+              if (note !== null) {
+                const html = processXRef(id, note);
+                instance.setContent(html);
+              } 
+            }).finally(() => {
+              instance.enable();
+              instance.show();
+            });
+          }
+        } else {
+          // See if we can fetch a full url (with no hash to target)
+          // This is a special case and we should probably do some content thinning / targeting
+          fetch(url)
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.querySelector('main.content');
+            if (note !== null) {
+              // This should only happen for chapter cross references
+              // (since there is no id in the URL)
+              // remove the first header
+              if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+                note.children[0].remove();
+              }
+              const html = processXRef(null, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      }, function(instance) {
+      });
+    }
+        let selectedAnnoteEl;
+        const selectorForAnnotation = ( cell, annotation) => {
+          let cellAttr = 'data-code-cell="' + cell + '"';
+          let lineAttr = 'data-code-annotation="' +  annotation + '"';
+          const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+          return selector;
+        }
+        const selectCodeLines = (annoteEl) => {
+          const doc = window.document;
+          const targetCell = annoteEl.getAttribute("data-target-cell");
+          const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+          const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+          const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+          const lineIds = lines.map((line) => {
+            return targetCell + "-" + line;
+          })
+          // Each band is positioned against its own containing block, which is
+          // not the offsetParent of the lines, so place it from client rects.
+          const placeBand = (band, firstEl, lastEl, codeBlock) => {
+            const container = band.offsetParent;
+            if (container === null) {
+              return;
+            }
+            const containerRect = container.getBoundingClientRect();
+            // Reveal.js scales slides with a transform, so convert client
+            // pixels back to the CSS pixels of the container.
+            const scale = containerRect.height / container.offsetHeight || 1;
+            const firstRect = firstEl.getBoundingClientRect();
+            const lastRect = lastEl.getBoundingClientRect();
+            const top = (firstRect.top - containerRect.top) / scale - container.clientTop + container.scrollTop;
+            const height = (lastRect.bottom - firstRect.top) / scale;
+            band.style.top = top - 2 + "px";
+            band.style.height = height + 4 + "px";
+            if (codeBlock) {
+              // Without the copy button wrapper, the containing block is wider
+              // than the code block, so span the code block explicitly.
+              const blockRect = codeBlock.getBoundingClientRect();
+              band.style.left = (blockRect.left - containerRect.left) / scale - container.clientLeft + container.scrollLeft + "px";
+              band.style.width = blockRect.width / scale + "px";
+            }
+          };
+          if (lineIds.length > 0) {
+            const el = window.document.getElementById(lineIds[0]);
+            const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+            const parent = el.parentElement.parentElement;
+            // cook up a div (if necessary) and position it
+            let div = window.document.getElementById("code-annotation-line-highlight");
+            if (div === null) {
+              div = window.document.createElement("div");
+              div.setAttribute("id", "code-annotation-line-highlight");
+              div.style.position = 'absolute';
+              parent.appendChild(div);
+            }
+            placeBand(div, el, lastEl, parent.closest("div.sourceCode") || parent);
+            let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+            if (gutterDiv === null) {
+              gutterDiv = window.document.createElement("div");
+              gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+              gutterDiv.style.position = 'absolute';
+              const codeCell = window.document.getElementById(targetCell);
+              const gutter = codeCell.querySelector('.code-annotation-gutter');
+              gutter.appendChild(gutterDiv);
+            }
+            placeBand(gutterDiv, el, lastEl);
+            selectedAnnoteEl = annoteEl;
+          }
+        };
+        const unselectCodeLines = () => {
+          const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+          elementsIds.forEach((elId) => {
+            const div = window.document.getElementById(elId);
+            if (div) {
+              div.remove();
+            }
+          });
+          selectedAnnoteEl = undefined;
+        };
+          // Handle positioning of the toggle
+      window.addEventListener(
+        "resize",
+        throttle(() => {
+          elRect = undefined;
+          if (selectedAnnoteEl) {
+            selectCodeLines(selectedAnnoteEl);
+          }
+        }, 10)
+      );
+      function throttle(fn, ms) {
+      let throttle = false;
+      let timer;
+        return (...args) => {
+          if(!throttle) { // first call gets through
+              fn.apply(this, args);
+              throttle = true;
+          } else { // all the others get throttled
+              if(timer) clearTimeout(timer); // cancel #2
+              timer = setTimeout(() => {
+                fn.apply(this, args);
+                timer = throttle = false;
+              }, ms);
+          }
+        };
+      }
+        // Attach click handler to the DT
+        const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+        for (const annoteDlNode of annoteDls) {
+          annoteDlNode.addEventListener('click', (event) => {
+            const clickedEl = event.target;
+            if (clickedEl !== selectedAnnoteEl) {
+              unselectCodeLines();
+              const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+              if (activeEl) {
+                activeEl.classList.remove('code-annotation-active');
+              }
+              selectCodeLines(clickedEl);
+              clickedEl.classList.add('code-annotation-active');
+            } else {
+              // Unselect the line
+              unselectCodeLines();
+              clickedEl.classList.remove('code-annotation-active');
+            }
+          });
+        }
+    const findCites = (el) => {
+      const parentEl = el.parentElement;
+      if (parentEl) {
+        const cites = parentEl.dataset.cites;
+        if (cites) {
+          return {
+            el,
+            cites: cites.split(' ')
+          };
+        } else {
+          return findCites(el.parentElement)
+        }
+      } else {
+        return undefined;
+      }
+    };
+    var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+    for (var i=0; i<bibliorefs.length; i++) {
+      const ref = bibliorefs[i];
+      const citeInfo = findCites(ref);
+      if (citeInfo) {
+        tippyHover(citeInfo.el, function() {
+          var popup = window.document.createElement('div');
+          citeInfo.cites.forEach(function(cite) {
+            var citeDiv = window.document.createElement('div');
+            citeDiv.classList.add('hanging-indent');
+            citeDiv.classList.add('csl-entry');
+            var biblioDiv = window.document.getElementById('ref-' + cite);
+            if (biblioDiv) {
+              citeDiv.innerHTML = biblioDiv.innerHTML;
+            }
+            popup.appendChild(citeDiv);
+          });
+          return popup.innerHTML;
+        });
+      }
+    }
+  });
+  </script>
+  <script type="application/javascript">
+  window.quartoScrollableRegionsLabels = {"code":"Scrollable code","output":"Scrollable output"};
+  </script>
+</div> <!-- /content -->
+
+
+
+
+<footer class="footer"><div class="nav-footer"><div class="nav-footer-center"><div class="toc-actions d-sm-block d-md-none"><ul><li><a href="https://github.com/AnswerDotAI/jupyasyncclient/issues/new" class="toc-action"><i class="bi bi-github"></i>Report an issue</a></li></ul></div></div></div></footer></body></html>
